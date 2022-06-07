@@ -17,8 +17,7 @@ from datetime import datetime
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-print(torch.cuda.is_available())
-print(device)
+print("device: ", device)
 
 def mnist(batch_size):
     
@@ -115,15 +114,15 @@ def train(model, train_dataloader, test_dataloader, criterion,
                 else:
                     mean_acc = accuracy_trace[-1]
 
-                if (n_epochs == 1):
-                    train_stat.append(loss_trace[-1], mean_acc, iter_i)
+                if (n_epochs == 1 and writer is not None):
+                    train_stat.append(loss_trace[-1], accuracy_trace[-1], iter_i)
 
                 tepoch.set_postfix(loss=loss_trace[-1], mean_accuracy = mean_acc, batch_accuracy=accuracy_trace[-1])
                 # sleep(0.1)
             if show and (iter_i + 1) % verbose == 0:
                 show_progress(epoch_i, loss_trace, accuracy_trace, x, y, y_pred)
         
-        if (n_epochs != 1):
+        if (n_epochs != 1 and writer is not None):
             train_stat.append(loss_trace[-1], mean_acc, epoch_i)
 
         # test_accuracy = test(model, test_dataloader)
@@ -139,8 +138,8 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
         model = Morph_Net(d, (1, 28, 28))
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-        #     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+        # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
         writer = None
         if with_logs:
@@ -151,7 +150,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
             logs = "logs/"
             writer = tb.writer.SummaryWriter(path.join(logs, model_name))
 
-        train_dataloader, test_dataloader = mnist(100)
+        train_dataloader, test_dataloader = mnist(batch_size)
 
         train_loss, train_accuracy = train(model, train_dataloader, test_dataloader,
                                     criterion, optimizer, writer,
@@ -160,5 +159,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return stats
 
 
-depths = [1]
-train_multilayer(depth=depths, epochs=1, with_logs=True)
+depths = [4]
+train_multilayer(depth=depths, epochs=1, batch_size=100, name="NEW_GRAD_VAL", with_logs=True)

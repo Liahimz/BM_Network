@@ -6,8 +6,9 @@ def extract_image_patches(x, kernel, stride=1, dilation=1):
     # print(x.shape)
     batch_size,c,h,w = x.shape
     patches = x.unfold(2, kernel, stride).unfold(3, kernel, stride)
+    # print(patches.shape)
     patches = patches.permute(0,4,5,1,2,3).contiguous()
-    return patches.view(batch_size,-1,patches.shape[-2], patches.shape[-1])
+    return patches.view(batch_size, -1, patches.shape[-2], patches.shape[-1])
 
 def extract_patches(x,
                     sizes,
