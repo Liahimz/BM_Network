@@ -110,6 +110,7 @@ class SMorphLayer(nn.Module):
                  input_shift=1e-9,
                  padding='VALID',
                  strides=(1, 1),
+                 alpha = 1,
                  **kwargs):
         super().__init__()
         self.filters = filters
@@ -136,7 +137,7 @@ class SMorphLayer(nn.Module):
 
         self.exp = Exp()
         
-        self.smax = Smooth_Max(alpha=1)
+        self.smax = Smooth_Max(alpha=alpha)
 
     def compute_output_shape(self, input_shape):
         if self.padding == 'VALID':
@@ -148,24 +149,100 @@ class SMorphLayer(nn.Module):
 
     def forward(self, x):
         filter_height, filter_width, in_channels, out_channels = self.kernel_shape
-        x1_pathces = self.ln(x)
-        x2_pathces = self.ln(-x)
+        # x1_pathces = self.ln(x)
+        # x2_pathces = self.ln(-x)
 
-        x1_pathces = extract_image_patches(x1_pathces, filter_height, self.strides[0])
-        x2_pathces = extract_image_patches(x2_pathces, filter_height, self.strides[0])
+        x1_pathces = extract_image_patches(x, filter_height, self.strides[0])
+        # x2_pathces = extract_image_patches(-x, filter_height, self.strides[0])
 
         x1_k1 = self.add_k1(x1_pathces)
-        x1_k2 = self.add_k2(x1_pathces)
+        # x1_k2 = self.add_k2(x1_pathces)
 
-        x2_k1 = self.add_k1(x2_pathces)
-        x2_k2 = self.add_k2(x2_pathces)
+        # x2_k1 = self.add_k1(x2_pathces)
+        # x2_k2 = self.add_k2(x2_pathces)
        
-        y11 = self.exp(self.smax(x1_k1))
-        y12 = self.exp(self.smax(x1_k2))
-        y21 = self.exp(self.smax(x2_k1))
-        y22 = self.exp(self.smax(x2_k2))
-        y = y11 - y12 - y21 + y22 + self.bias[None, :, None, None]
+        # y11 = self.exp(self.smax(x1_k1))
+        # y12 = self.exp(self.smax(x1_k2))
+        # y21 = self.exp(self.smax(x2_k1))
+        # y22 = self.exp(self.smax(x2_k2))
+
+        y11 = (self.smax(x1_k1))
+        # y12 = (self.smax(x1_k2))
+        # y21 = (self.smax(x2_k1))
+        # y22 = (self.smax(x2_k2))
+        y = y11 + self.bias[None, :, None, None]
         return y
+
+
+# class LMorphLayer(nn.Module):
+#     def __init__(self, filters,
+#                  input_shape,
+#                  kernel_size,
+#                  input_shift=1e-9,
+#                  padding='VALID',
+#                  strides=(1, 1),
+#                  alpha = 1,
+#                  **kwargs):
+#         super().__init__()
+#         self.filters = filters
+#         self.input_shape = input_shape
+#         self.kernel_size = kernel_size
+#         self.input_shift = input_shift
+#         self.padding = padding.upper()
+#         self.strides = strides
+#         self.kernel_shape = self.kernel_size[0], self.kernel_size[1], self.input_shape[0], self.filters
+
+#         self.bias = torch.nn.Parameter(torch.zeros(self.filters, requires_grad=True))
+
+#         self.batch_norm = nn.BatchNorm2d(filters)
+
+#         self.ln = Ln(min_val=1e-9)
+
+#         self.add_k1 = Add(filters,
+#                  input_shape,
+#                  kernel_size)
+
+#         self.add_k2 = Add(filters,
+#                  input_shape,
+#                  kernel_size)
+
+#         self.exp = Exp()
+        
+#         self.smax = Smooth_Max(alpha=alpha)
+
+#     def compute_output_shape(self, input_shape):
+#         if self.padding == 'VALID':
+#             return (self.kernel_shape[3], (self.input_shape[1] - self.kernel_shape[1] + 1) // self.strides[0],
+#                    (self.input_shape[2] - self.kernel_shape[0] + 1) // self.strides[1])
+#         else:
+            
+#             return (self.kernel_shape[3], self.input_shape[1] // self.strides[0], self.input_shape[2] // self.strides[1])
+
+#     def forward(self, x):
+#         filter_height, filter_width, in_channels, out_channels = self.kernel_shape
+#         # x1_pathces = self.ln(x)
+#         # x2_pathces = self.ln(-x)
+#         new_x = 1. + (x - torch.min(x)) / (torch.max(x) - torch.min(x))
+#         x1_pathces = extract_image_patches(new_x, filter_height, self.strides[0])
+#         # x2_pathces = extract_image_patches(-x, filter_height, self.strides[0])
+
+#         x1_k1 = self.add_k1(x1_pathces)
+#         # x1_k2 = self.add_k2(x1_pathces)
+
+#         # x2_k1 = self.add_k1(x2_pathces)
+#         # x2_k2 = self.add_k2(x2_pathces)
+       
+#         # y11 = self.exp(self.smax(x1_k1))
+#         # y12 = self.exp(self.smax(x1_k2))
+#         # y21 = self.exp(self.smax(x2_k1))
+#         # y22 = self.exp(self.smax(x2_k2))
+
+#         y11 = (self.smax(x1_k1))
+#         # y12 = (self.smax(x1_k2))
+#         # y21 = (self.smax(x2_k1))
+#         # y22 = (self.smax(x2_k2))
+#         y = y11 + self.bias[None, :, None, None]
+#         return y
         
 
 class MorphLayer(nn.Module):
@@ -176,6 +253,7 @@ class MorphLayer(nn.Module):
                  padding='VALID',
                  strides=(1, 1),
                  grad_coef = 1e-2,
+                 layer = 1,
                  **kwargs):
         super().__init__()
         self.filters = filters
@@ -188,19 +266,23 @@ class MorphLayer(nn.Module):
 
         self.bias = torch.nn.Parameter(torch.zeros(self.filters, requires_grad=True))
 
+        self.layer = layer
+
         self.batch_norm = nn.BatchNorm2d(filters)
 
-        self.ln = Ln(min_val=1e-9)
+        self.ln = Ln(min_val=1e-12)
 
         self.add_k1 = Add(filters,
                  input_shape,
                  kernel_size,
-                 grad_coef)
+                 grad_coef,
+                 self.layer)
 
         self.add_k2 = Add(filters,
                  input_shape,
                  kernel_size,
-                 grad_coef)
+                 grad_coef,
+                 self.layer)
 
         self.exp = Exp()
 

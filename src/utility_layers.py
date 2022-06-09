@@ -1,10 +1,11 @@
+from time import pthread_getcpuclockid
 import torch
 import numpy as np
 from utils import *
 import torch.nn as nn
 from torch.autograd import Function
 
-USE_AUTOGRAD = False
+USE_AUTOGRAD = True
 
 def get_hook(name):
     def print_hook(grad):
@@ -34,7 +35,7 @@ def ln_func(min_val):
             return del_x * y_grad
     return ln_func
 
-def add_func(kernel_shape, grad_coef):
+def add_func(kernel_shape, grad_coef, layer):
     class add_func(Function):
         @staticmethod
         def forward(ctx, x, k):
@@ -58,10 +59,35 @@ def add_func(kernel_shape, grad_coef):
             x_grad = torch.sum(y_grad, [2])
             # print("x_grad ", x_grad.shape)
             x_grad = x_grad.view(ctx.x_shape)
-            coef = torch.numel(x_grad) * 0.1 / torch.norm(x_grad, p=2)
-            print(coef)
-            print(f'x_grad = {torch.mean(x_grad * coef)} {torch.std(x_grad * coef)}')
-            return x_grad * coef, k_grad * 1
+
+            # coef_k = torch.numel(k_grad) * 0.0000001 / torch.norm(k_grad, p=2)
+            # coef_x = torch.numel(x_grad) * 0.0000001 / torch.norm(x_grad, p=2)
+            sum_coef = torch.norm(k_grad, p=2) + torch.norm(x_grad, p=2)
+            # print(sum_coef)
+            sum_coef = (torch.numel(k_grad) + torch.numel(x_grad)) / sum_coef
+            coef_x = coef_k = 1
+            mean = torch.abs(torch.mean(k_grad))
+            
+            if mean < 10e-16:
+                coef_x = coef_k = 0
+            elif mean < 10e-14:
+                coef_x = coef_k = 10e-9 
+            elif mean > 10e-2:
+                coef_x = coef_k = 10e-3 / mean
+            elif mean > 10e-3:
+                coef_x = coef_k = 10e-4 / mean
+            elif mean > 10e-4:
+                coef_x = coef_k = 10e-6 / mean
+
+            # if layer > 4:
+            #     coef = 10
+            # if layer > 3:
+            #     coef = 1
+            coef_x = coef_k = 1
+
+            # print(coef)
+            # print(f'k_grad = {layer} {torch.mean(k_grad)} {sum_coef}') #{torch.std(k_grad)}
+            return x_grad * coef_x, k_grad * coef_k
     return add_func
 
 def exp_func():
@@ -86,21 +112,21 @@ def smax_func(alpha):
             s1 = torch.sum(eax, dim=1)
             s0 = torch.sum(x * eax, dim=1)
             ctx.save_for_backward(x, eax, s1, s0)
+            
             return s0 / s1
 
         @staticmethod
         def backward(ctx, y_grad):
             x, eax, s1, s0 = ctx.saved_tensors
-            tmp1 = (x * eax + eax) * torch.unsqueeze(s1, 1)
-            tmp2 = eax * torch.unsqueeze(s0, 1)
-            res = (tmp1 + tmp2) / torch.unsqueeze(s1 * s1, 1)
-            # print(res[0, :, 0, 0, 0])
+            tmp1 = (alpha * x * eax + eax) * torch.unsqueeze(s1, 1)
+            tmp2 = alpha * eax * torch.unsqueeze(s0, 1)
+            res = (tmp1 - tmp2) / torch.unsqueeze(s1 * s1, 1)
             return res * torch.unsqueeze(y_grad, 1)
     return smax_func
 
 class Ln(nn.Module):
     def __init__(self, 
-                min_val = 1e-9,
+                min_val = 1e-11,
                  **kwargs):
         super().__init__()
         # self.filters = filters
@@ -126,6 +152,7 @@ class Add(nn.Module):
                  input_shape,
                  kernel_size,
                  grad_coef = 1e-2,
+                 layer = 1,
                  **kwargs):
         super().__init__()
         self.filters = filters
@@ -136,7 +163,7 @@ class Add(nn.Module):
         self.k = torch.nn.Parameter(torch.empty(self.kernel_shape, requires_grad=True))
         torch.nn.init.xavier_uniform_(self.k)
 
-        self.add_forward = add_func(self.kernel_shape, grad_coef)
+        self.add_forward = add_func(self.kernel_shape, grad_coef, layer)
         
         
     def forward(self, x):
@@ -176,7 +203,33 @@ class Smooth_Max(nn.Module):
         if USE_AUTOGRAD:
             ax = torch.exp(torch.mul(x, self.alpha))
             s_max = torch.mul(x, ax / torch.sum(ax, dim=1, keepdims=True))
+            # print(torch.sum(s_max, dim=1))
             return torch.sum(s_max, dim=1)
         return self.max_forward.apply(x)
         
 
+class Lmooth_Max(nn.Module):
+    def __init__(self, 
+                 alpha = 10,
+                 **kwargs):
+        super().__init__()
+        self.alpha = alpha
+        # self.max_forward = smax_func(self.alpha)
+
+    def forward(self, x):
+        if USE_AUTOGRAD:
+            return torch.sum(torch.pow(x, self.alpha + 1), dim=1) / torch.sum(torch.pow(x, self.alpha), dim=1)
+        return None
+
+class LnExp_Max(nn.Module):
+    def __init__(self, 
+                 alpha = 10,
+                 **kwargs):
+        super().__init__()
+        self.alpha = alpha
+        # self.max_forward = smax_func(self.alpha)
+
+    def forward(self, x):
+        if USE_AUTOGRAD:
+            return torch.log(torch.sum(torch.exp(torch.mul(x, self.alpha)), dim=1)) / self.alpha
+        return None

@@ -135,11 +135,11 @@ def train(model, train_dataloader, test_dataloader, criterion,
 def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = False):
     stats = {}
     for d in depth:
-        model = Morph_Net(d, (1, 28, 28))
+        model = Smorph_Net(d, (1, 28, 28))
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
-        # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-        optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         writer = None
         if with_logs:
@@ -159,5 +159,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return stats
 
 
-depths = [4]
-train_multilayer(depth=depths, epochs=1, batch_size=100, name="NEW_GRAD_VAL", with_logs=True)
+depths = [1, 2, 3, 4]
+train_multilayer(depth=depths, epochs=50, batch_size=100, name="SMORPH", with_logs=True)
