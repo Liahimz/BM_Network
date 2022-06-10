@@ -81,6 +81,31 @@ class Smorph_Net(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+class LnExpMax_Net(nn.Module):
+
+    def __init__(self, depth, shape):
+        super().__init__()
+        
+        layers = []
+        layers.append(LnExp_Max(32, kernel_size = (3, 3), input_shape=shape, alpha=1))
+        layers.append(nn.ReLU())
+        out_shape = shape
+        for i in range(depth):
+            out_shape = layers[-2].compute_output_shape(input_shape=out_shape)
+            layers.append(LnExp_Max(16, kernel_size = (3, 3), input_shape=out_shape, alpha=i+2))
+            layers.append(nn.ReLU())
+            
+        out_shape = layers[-2].compute_output_shape(input_shape=out_shape)
+        layers.append(nn.Flatten())
+        layers.append(nn.Linear(np.prod(out_shape), 10))
+        layers.append(nn.Softmax(dim=1))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)
+
+    
+
 class Morph_Net(nn.Module):
 
     def __init__(self, depth, shape):

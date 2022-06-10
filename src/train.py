@@ -63,22 +63,28 @@ def score(y_pred, y):
     N = len(y)
     return ((y_pred == y).sum() / N).item()
 
-def test(model, test_dataloader):
+def test(model, criterion, test_dataloader):
 
     model.eval()
     total_accuracy = 0.0
+    total_loss = []
     total = 0
     
     with torch.no_grad():
-        for x, y in test_dataloader:            
-            x, y = x.to(device), y.to(device)            
-            pred = model(x)
-            y_pred = predict(pred)
-            total_accuracy += (y_pred == y).sum()
-            total += len(y)
+        with tqdm(test_dataloader, unit="batch") as tepoch:
+            for x, y in tepoch:            
+                x, y = x.to(device), y.to(device)            
+                pred = model(x)
+                y_pred = predict(pred)
+                total_accuracy += (y_pred == y).sum()
+                total += len(y)
+                loss = criterion(pred, y)
+                total_loss.append(loss.item())
+                tepoch.set_postfix(loss=loss.item(), accuracy = (total_accuracy / total).item())
   
     total_accuracy /= total
-    return total_accuracy.item()
+    # total_loss /= total
+    return total_accuracy.item(), sum(total_loss) / len(total_loss)
     
 def train(model, train_dataloader, test_dataloader, criterion, 
     optimizer, writer=None, n_epochs=1, show=False, verbose=10):
@@ -115,15 +121,17 @@ def train(model, train_dataloader, test_dataloader, criterion,
                     mean_acc = accuracy_trace[-1]
 
                 if (n_epochs == 1 and writer is not None):
-                    train_stat.append(loss_trace[-1], accuracy_trace[-1], iter_i)
+                    train_stat.append(loss_trace[-1], accuracy_trace[-1], None, None, iter_i)
 
                 tepoch.set_postfix(loss=loss_trace[-1], mean_accuracy = mean_acc, batch_accuracy=accuracy_trace[-1])
                 # sleep(0.1)
             if show and (iter_i + 1) % verbose == 0:
                 show_progress(epoch_i, loss_trace, accuracy_trace, x, y, y_pred)
         
+        test_accuracy, total_loss = test(model, criterion, test_dataloader)
+
         if (n_epochs != 1 and writer is not None):
-            train_stat.append(loss_trace[-1], mean_acc, epoch_i)
+            train_stat.append(loss_trace[-1], mean_acc, total_loss, test_accuracy, epoch_i)
 
         # test_accuracy = test(model, test_dataloader)
         # print(f'test  accuracy: {test_accuracy:.3f}')
@@ -159,5 +167,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return stats
 
 
-depths = [1, 2, 3, 4]
-train_multilayer(depth=depths, epochs=50, batch_size=100, name="SMORPH", with_logs=True)
+depths = [2, 3, 4]
+train_multilayer(depth=depths, epochs=50, batch_size=40, name="BiSMORPH", with_logs=True)
