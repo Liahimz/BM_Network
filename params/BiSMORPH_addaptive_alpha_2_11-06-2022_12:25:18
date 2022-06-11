@@ -1,0 +1,6 @@
+alpha of layer 0 = Parameter containing:
+tensor(2.4979, device='cuda:0', requires_grad=True)
+alpha of layer 2 = Parameter containing:
+tensor(2.2212, device='cuda:0', requires_grad=True)
+alpha of layer 4 = Parameter containing:
+tensor(2.0086, device='cuda:0', requires_grad=True)

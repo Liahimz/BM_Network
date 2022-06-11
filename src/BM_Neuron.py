@@ -122,7 +122,7 @@ class SMorphLayer(nn.Module):
         self.kernel_shape = self.kernel_size[0], self.kernel_size[1], self.input_shape[0], self.filters
 
         self.bias = torch.nn.Parameter(torch.zeros(self.filters, requires_grad=True))
-
+        self.alpha = alpha #nn.Parameter(torch.tensor(1., requires_grad=True)) #
         # self.batch_norm = nn.BatchNorm2d(filters)
 
         # self.ln = Ln(min_val=1e-9)
@@ -137,7 +137,7 @@ class SMorphLayer(nn.Module):
 
         # self.exp = Exp()
         
-        self.smax = Smooth_Max(alpha=alpha)
+        self.smax = Smooth_Max(alpha=self.alpha)
 
     def compute_output_shape(self, input_shape):
         if self.padding == 'VALID':
@@ -194,7 +194,7 @@ class LnExpMaxLayer(nn.Module):
 
         self.bias = torch.nn.Parameter(torch.zeros(self.filters, requires_grad=True))
 
-        self.alpha = nn.Parameter(torch.tensor(1., requires_grad=True))
+        self.alpha = alpha #nn.Parameter(torch.tensor(1., requires_grad=True))
 
         self.batch_norm = nn.BatchNorm2d(filters)
 
@@ -219,12 +219,12 @@ class LnExpMaxLayer(nn.Module):
     def forward(self, x):
         filter_height, filter_width, in_channels, out_channels = self.kernel_shape
         x1_pathces = extract_image_patches(x, filter_height, self.strides[0])
-        x2_pathces = extract_image_patches(-x, filter_height, self.strides[0])
+        # x2_pathces = extract_image_patches(-x, filter_height, self.strides[0])
         x1_k1 = self.add_k1(x1_pathces)
-        x2_k2 = self.add_k2(x2_pathces)
+        # x2_k2 = self.add_k2(x2_pathces)
         y11 = (self.lnxmax(x1_k1))
-        y22 = (self.lnxmax(x2_k2))
-        y = y11 + y22 + self.bias[None, :, None, None]
+        # y22 = (self.lnxmax(x2_k2))
+        y = y11 + self.bias[None, :, None, None]
         return y
         
 

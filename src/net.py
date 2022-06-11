@@ -64,7 +64,7 @@ class Smorph_Net(nn.Module):
         super().__init__()
         
         layers = []
-        layers.append(SMorphLayer(32, kernel_size = (3, 3), input_shape=shape, alpha=1))
+        layers.append(SMorphLayer(32, kernel_size = (3, 3), input_shape=shape, alpha=2.5))
         layers.append(nn.ReLU())
         out_shape = shape
         for i in range(depth):
@@ -87,12 +87,12 @@ class LnExpMax_Net(nn.Module):
         super().__init__()
         
         layers = []
-        layers.append(LnExp_Max(32, kernel_size = (3, 3), input_shape=shape, alpha=1))
+        layers.append(LnExpMaxLayer(32, kernel_size = (3, 3), input_shape=shape, alpha=1))
         layers.append(nn.ReLU())
         out_shape = shape
         for i in range(depth):
             out_shape = layers[-2].compute_output_shape(input_shape=out_shape)
-            layers.append(LnExp_Max(16, kernel_size = (3, 3), input_shape=out_shape, alpha=i+2))
+            layers.append(LnExpMaxLayer(16, kernel_size = (3, 3), input_shape=out_shape, alpha=2))
             layers.append(nn.ReLU())
             
         out_shape = layers[-2].compute_output_shape(input_shape=out_shape)

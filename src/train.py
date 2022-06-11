@@ -121,7 +121,7 @@ def train(model, train_dataloader, test_dataloader, criterion,
                     mean_acc = accuracy_trace[-1]
 
                 if (n_epochs == 1 and writer is not None):
-                    train_stat.append(loss_trace[-1], accuracy_trace[-1], None, None, iter_i)
+                    train_stat.append(loss_trace[-1], accuracy_trace[-1], [0], [0], iter_i)
 
                 tepoch.set_postfix(loss=loss_trace[-1], mean_accuracy = mean_acc, batch_accuracy=accuracy_trace[-1])
                 # sleep(0.1)
@@ -140,32 +140,45 @@ def train(model, train_dataloader, test_dataloader, criterion,
 
 
 
-def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = False):
+def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = False, save_params = False):
     stats = {}
     for d in depth:
         model = Smorph_Net(d, (1, 28, 28))
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
+        dump_file = None
         writer = None
-        if with_logs:
-            dt = datetime.now()
-            str_date_time = dt.strftime("%d-%m-%Y_%H:%M:%S")
-            model_name = name + "_" + str(d) + "_" + str_date_time
 
+        dt = datetime.now()
+        str_date_time = dt.strftime("%d-%m-%Y_%H:%M:%S")
+        model_name = name + "_" + str(d) + "_" + str_date_time
+        if with_logs:
             logs = "logs/"
             writer = tb.writer.SummaryWriter(path.join(logs, model_name))
+
+        if save_params:
+            params = "params/"
+            dump_file = open(path.join(params, model_name), "w")
 
         train_dataloader, test_dataloader = mnist(batch_size)
 
         train_loss, train_accuracy = train(model, train_dataloader, test_dataloader,
                                     criterion, optimizer, writer,
                                     n_epochs=epochs, show=False)
+
+        if dump_file is not None:
+            for i in range((d+1) * 2):
+                if i % 2 == 0:
+                    data = "alpha of layer " + str(i) + " = " + str(model.net[i].alpha) + "\n"
+                    dump_file.write(data)
+            dump_file.close()
+
         stats[d] = (train_loss, train_accuracy)
     return stats
 
 
-depths = [2, 3, 4]
-train_multilayer(depth=depths, epochs=50, batch_size=40, name="BiSMORPH", with_logs=True)
+depths = [4]
+train_multilayer(depth=depths, epochs=2, batch_size=40, name="BiSMORPH_grad", with_logs=False, save_params=False)

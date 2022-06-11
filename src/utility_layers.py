@@ -1,11 +1,12 @@
 from time import pthread_getcpuclockid
+from traceback import print_tb
 import torch
 import numpy as np
 from utils import *
 import torch.nn as nn
 from torch.autograd import Function
 
-USE_AUTOGRAD = True
+USE_AUTOGRAD = False
 
 def get_hook(name):
     def print_hook(grad):
@@ -121,7 +122,8 @@ def smax_func(alpha):
             tmp1 = (alpha * x * eax + eax) * torch.unsqueeze(s1, 1)
             tmp2 = alpha * eax * torch.unsqueeze(s0, 1)
             res = (tmp1 - tmp2) / torch.unsqueeze(s1 * s1, 1)
-            return res * torch.unsqueeze(y_grad, 1)
+            print(torch.mean(res * torch.unsqueeze(y_grad, 1)))
+            return res * torch.unsqueeze(y_grad, 1) * 10e+7
     return smax_func
 
 class Ln(nn.Module):
@@ -230,6 +232,7 @@ class LnExp_Max(nn.Module):
         # self.max_forward = smax_func(self.alpha)
 
     def forward(self, x):
-        if USE_AUTOGRAD:
-            return torch.log(torch.sum(torch.exp(torch.mul(x, self.alpha)), dim=1)) / self.alpha
-        return None
+        # if USE_AUTOGRAD:
+        ax = torch.exp(torch.mul(x, self.alpha))
+        return torch.log(torch.sum(ax, dim=1)) / self.alpha
+        # return None
