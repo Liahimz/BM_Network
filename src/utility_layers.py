@@ -6,11 +6,14 @@ from utils import *
 import torch.nn as nn
 from torch.autograd import Function
 
-USE_AUTOGRAD = False
+USE_AUTOGRAD = True
 
-def get_hook(name):
+def get_hook(name, layer=None):
     def print_hook(grad):
-        print(f'{name} = {torch.mean(grad)}, {torch.std(grad)}')
+        if layer is None:
+            print(f'{name} = {torch.mean(grad)}, {torch.std(grad)}')
+        else:
+            print(f'{name} = {layer}, {torch.mean(grad)}, {torch.std(grad)}')
         return grad
     return print_hook
 
@@ -105,7 +108,7 @@ def exp_func():
             return y * y_grad
     return exp_func
 
-def smax_func(alpha):
+def smax_func(alpha, layer):
     class smax_func(Function):
         @staticmethod
         def forward(ctx, x):
@@ -113,18 +116,52 @@ def smax_func(alpha):
             s1 = torch.sum(eax, dim=1)
             s0 = torch.sum(x * eax, dim=1)
             ctx.save_for_backward(x, eax, s1, s0)
-            
+            # print("layer ", layer)
+            # print("x", torch.mean(x))
+            # print(torch.mean(s0 / s1))
             return s0 / s1
 
         @staticmethod
         def backward(ctx, y_grad):
             x, eax, s1, s0 = ctx.saved_tensors
+            
+            # print("layer ", layer)
+            # print("x", x[0, 0, 0, 0, :])
+            # print("s0", s0[0, 0, 0, :])
+            # print("s1", s1[0, 0, 0, :])
+            # print("eax", eax[0, 0, 0, 0, :])
             tmp1 = (alpha * x * eax + eax) * torch.unsqueeze(s1, 1)
+            # print("tmp1", tmp1[0, 0, 0, 0, :])
             tmp2 = alpha * eax * torch.unsqueeze(s0, 1)
+            # print("tmp2",tmp2[0, 0, 0, 0, :])
             res = (tmp1 - tmp2) / torch.unsqueeze(s1 * s1, 1)
+            # print("tmp1 - tmp2",(tmp1 - tmp2)[0, 0, 0, 0, :])
+            # print("s1 * s1",(s1 * s1)[0, 0, 0, :])
+            # print("res",(res)[0, 0, 0, 0, :])
+            # print("y_grad",(y_grad)[0, 0, 0, :])
+            # print("y_grad non zero", torch.count_nonzero(y_grad))
             print(torch.mean(res * torch.unsqueeze(y_grad, 1)))
-            return res * torch.unsqueeze(y_grad, 1) * 10e+7
+            # exit(0)
+            return res * torch.unsqueeze(y_grad, 1) 
     return smax_func
+
+def lnexpmax_func(alpha, layer):
+    class lnexpmax_func(Function):
+        @staticmethod
+        def forward(ctx, x):
+            eax = torch.exp(torch.mul(x, alpha))
+            ctx.save_for_backward(eax)
+            print(torch.mean(x))
+            print(torch.mean(torch.log(torch.sum(eax, dim=1)) / alpha))
+            return torch.log(torch.sum(eax, dim=1)) / alpha
+
+        @staticmethod
+        def backward(ctx, y_grad):
+            eax = ctx.saved_tensors[0]
+            tmp = eax / torch.sum(eax, dim=1, keepdim=True)
+            # print(torch.mean(tmp * torch.unsqueeze(y_grad, 1)))
+            return tmp * torch.unsqueeze(y_grad, 1) 
+    return lnexpmax_func
 
 class Ln(nn.Module):
     def __init__(self, 
@@ -196,10 +233,12 @@ class Exp(nn.Module):
 class Smooth_Max(nn.Module):
     def __init__(self, 
                  alpha = 1,
+                 layer = 1,
                  **kwargs):
         super().__init__()
         self.alpha = alpha
-        self.max_forward = smax_func(self.alpha)
+        self.layer = layer
+        self.max_forward = smax_func(self.alpha, self.layer)
 
     def forward(self, x):
         if USE_AUTOGRAD:
@@ -210,7 +249,26 @@ class Smooth_Max(nn.Module):
         return self.max_forward.apply(x)
         
 
-class Lmooth_Max(nn.Module):
+class LnExp_Max(nn.Module):
+    def __init__(self, 
+                 alpha = 10,
+                 layer = 1,
+                 **kwargs):
+        super().__init__()
+        self.alpha = alpha
+        self.layer = layer
+        self.lnexpmax_forward = lnexpmax_func(self.alpha, self.layer)
+
+    def forward(self, x):
+        if USE_AUTOGRAD:
+            ax = torch.exp(torch.mul(x, self.alpha))
+            y = torch.log(torch.sum(ax, dim=1)) / self.alpha
+            # print(torch.mean(x))
+            # y.register_hook(get_hook('y'))
+            return y
+        return self.lnexpmax_forward.apply(x)
+
+class L_Max(nn.Module):
     def __init__(self, 
                  alpha = 10,
                  **kwargs):
@@ -220,19 +278,25 @@ class Lmooth_Max(nn.Module):
 
     def forward(self, x):
         if USE_AUTOGRAD:
+            x  = (x - torch.min(x)) / (torch.max(x) - torch.min(x))
             return torch.sum(torch.pow(x, self.alpha + 1), dim=1) / torch.sum(torch.pow(x, self.alpha), dim=1)
         return None
 
-class LnExp_Max(nn.Module):
+
+class Conv(nn.Module):
     def __init__(self, 
-                 alpha = 10,
+                 in_chanels = 1,
+                 out_chanels = 1,
+                 kernel_size = 1,
+                 layer = 1,
                  **kwargs):
         super().__init__()
-        self.alpha = alpha
-        # self.max_forward = smax_func(self.alpha)
+        self.conv = nn.Conv2d(in_channels=in_chanels, out_channels=out_chanels, kernel_size = (kernel_size, kernel_size))
+        self.layer = layer
 
     def forward(self, x):
-        # if USE_AUTOGRAD:
-        ax = torch.exp(torch.mul(x, self.alpha))
-        return torch.log(torch.sum(ax, dim=1)) / self.alpha
-        # return None
+        # x.requires_grad=True
+        xk = torch.tensor(x, requires_grad=True)
+        xk.register_hook(get_hook('x', self.layer))
+        return self.conv(xk)
+

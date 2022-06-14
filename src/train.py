@@ -23,10 +23,12 @@ def mnist(batch_size):
     
     transform = transforms.Compose([transforms.ToTensor()])
 
-    trainset = torchvision.datasets.MNIST(root='./data/mnist', train=True, download=True, transform=transform)
+    # trainset = torchvision.datasets.MNIST(root='./data/mnist', train=True, download=True, transform=transform)
+    trainset = torchvision.datasets.FashionMNIST(root='./data/f_mnist', train=True, download=True, transform=transform)
     train_dataloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=1)
 
-    testset = torchvision.datasets.MNIST(root='./data/mnist', train=False, download=True, transform=transform)
+    # testset = torchvision.datasets.MNIST(root='./data/mnist', train=False, download=True, transform=transform)
+    testset = torchvision.datasets.FashionMNIST(root='./data/f_mnist', train=False, download=True, transform=transform)
     test_dataloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=1)
     
     return train_dataloader, test_dataloader
@@ -146,7 +148,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
         model = Smorph_Net(d, (1, 28, 28))
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -180,5 +182,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return stats
 
 
-depths = [4]
-train_multilayer(depth=depths, epochs=2, batch_size=40, name="BiSMORPH_grad", with_logs=False, save_params=False)
+depths = [1]
+train_multilayer(depth=depths, epochs=5, batch_size=50, name="LNEXPMAX_grad", with_logs=False, save_params=False)

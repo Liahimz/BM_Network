@@ -111,6 +111,7 @@ class SMorphLayer(nn.Module):
                  padding='VALID',
                  strides=(1, 1),
                  alpha = 1,
+                 layer = 1,
                  **kwargs):
         super().__init__()
         self.filters = filters
@@ -124,7 +125,7 @@ class SMorphLayer(nn.Module):
         self.bias = torch.nn.Parameter(torch.zeros(self.filters, requires_grad=True))
         self.alpha = alpha #nn.Parameter(torch.tensor(1., requires_grad=True)) #
         # self.batch_norm = nn.BatchNorm2d(filters)
-
+        self.layer = layer
         # self.ln = Ln(min_val=1e-9)
 
         self.add_k1 = Add(filters,
@@ -137,7 +138,7 @@ class SMorphLayer(nn.Module):
 
         # self.exp = Exp()
         
-        self.smax = Smooth_Max(alpha=self.alpha)
+        self.smax = Smooth_Max(alpha=self.alpha, layer=self.layer)
 
     def compute_output_shape(self, input_shape):
         if self.padding == 'VALID':
@@ -182,6 +183,7 @@ class LnExpMaxLayer(nn.Module):
                  padding='VALID',
                  strides=(1, 1),
                  alpha = 1,
+                 layer = 1,
                  **kwargs):
         super().__init__()
         self.filters = filters
@@ -202,11 +204,13 @@ class LnExpMaxLayer(nn.Module):
                  input_shape,
                  kernel_size)
         
-        self.add_k2 = Add(filters,
-                 input_shape,
-                 kernel_size)
+        # self.add_k2 = Add(filters,
+        #          input_shape,
+        #          kernel_size)
 
-        self.lnxmax = LnExp_Max(alpha=self.alpha)
+        self.lnxmax = LnExp_Max(alpha=self.alpha, layer=layer)
+
+        # self.lmax = L_Max(alpha=self.alpha, layer=layer)
 
     def compute_output_shape(self, input_shape):
         if self.padding == 'VALID':
@@ -223,6 +227,7 @@ class LnExpMaxLayer(nn.Module):
         x1_k1 = self.add_k1(x1_pathces)
         # x2_k2 = self.add_k2(x2_pathces)
         y11 = (self.lnxmax(x1_k1))
+        # y11 = (self.lmax(x1_k1))
         # y22 = (self.lnxmax(x2_k2))
         y = y11 + self.bias[None, :, None, None]
         return y

@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from tmp_neuron import TMP2_SMorphLayer, TMP_SMorphLayer
 from utils import *
 import torch.nn as nn
 from BM_Neuron import* 
@@ -34,6 +35,7 @@ class BM_Net(nn.Module):
         return self.net(x)
 
 size = [21632, 9216, 7744, 6400, 5184]
+# size = [21632, 9216, 7744, 6400, 324]
 
 class CNN_Net(nn.Module):
 
@@ -41,11 +43,13 @@ class CNN_Net(nn.Module):
         super().__init__()
         
         layers = []
-        layers.append(nn.Conv2d(1, 32, kernel_size = (3, 3)))
+        layers.append(nn.Conv2d(in_channels=1, out_channels=32, kernel_size = (3, 3)))
+        # layers.append(Conv2d(in_channels=1, out_channels=32, kernel_size = (3, 3), layer = 1))
         layers.append(nn.ReLU())
         out_shape = 32
         for i in range(depth):
-            layers.append(nn.Conv2d(out_shape, 16, kernel_size = (3, 3)))
+            layers.append(nn.Conv2d(in_channels=out_shape, out_channels=16, kernel_size = (3, 3)))
+            # layers.append(Conv2d(in_channels=out_shape, out_channels=16, kernel_size = (3, 3), layer = i + 2))
             layers.append(nn.ReLU())
             out_shape = 16
             
@@ -55,6 +59,8 @@ class CNN_Net(nn.Module):
         self.net = nn.Sequential(*layers)
 
     def forward(self, x):
+        # xk = torch.tensor(x, requires_grad=True)
+        # xk.register_hook(get_hook('x'))
         return self.net(x)
 
 
@@ -64,13 +70,15 @@ class Smorph_Net(nn.Module):
         super().__init__()
         
         layers = []
-        layers.append(SMorphLayer(32, kernel_size = (3, 3), input_shape=shape, alpha=2.5))
-        layers.append(nn.ReLU())
+        # layers.append(SMorphLayer(filters=32, kernel_size = (3, 3), input_shape=shape, alpha=2.5, layer=1))
+        layers.append(TMP_SMorphLayer(filters=32, kernel_size = (3, 3), input_shape=shape, alpha=2.5, layer=1))
+        layers.append(nn.Tanh())
         out_shape = shape
         for i in range(depth):
             out_shape = layers[-2].compute_output_shape(input_shape=out_shape)
-            layers.append(SMorphLayer(16, kernel_size = (3, 3), input_shape=out_shape, alpha=2))
-            layers.append(nn.ReLU())
+            # layers.append(SMorphLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, alpha=2, layer=i + 2))
+            layers.append(TMP_SMorphLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, alpha=2, layer=i + 2))
+            layers.append(nn.Tanh())
             
         out_shape = layers[-2].compute_output_shape(input_shape=out_shape)
         layers.append(nn.Flatten())
@@ -87,12 +95,12 @@ class LnExpMax_Net(nn.Module):
         super().__init__()
         
         layers = []
-        layers.append(LnExpMaxLayer(32, kernel_size = (3, 3), input_shape=shape, alpha=1))
+        layers.append(LnExpMaxLayer(filters=32, kernel_size = (3, 3), input_shape=shape, alpha=10))
         layers.append(nn.ReLU())
         out_shape = shape
         for i in range(depth):
             out_shape = layers[-2].compute_output_shape(input_shape=out_shape)
-            layers.append(LnExpMaxLayer(16, kernel_size = (3, 3), input_shape=out_shape, alpha=2))
+            layers.append(LnExpMaxLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, alpha=10))
             layers.append(nn.ReLU())
             
         out_shape = layers[-2].compute_output_shape(input_shape=out_shape)
