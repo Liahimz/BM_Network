@@ -146,6 +146,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     for d in depth:
         model = Smorph_Net(d, (1, 28, 28))
+        # model = LeNet(d, (1, 28, 28))
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -162,8 +163,12 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
             writer = tb.writer.SummaryWriter(path.join(logs, model_name))
 
         if save_params:
-            params = "params/"
-            dump_file = open(path.join(params, model_name), "w")
+            # params = "params/"
+            # dump_file = open(path.join(params, model_name), "w")
+
+            models = "models/"
+            path_file = path.join(models, model_name + ".pt")
+            torch.save(model.state_dict(), path_file)
 
         train_dataloader, test_dataloader = mnist(batch_size)
 
@@ -178,9 +183,14 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
                     dump_file.write(data)
             dump_file.close()
 
+        if save_params:
+            models = "models/"
+            dump_file = path.join(models, model_name + "_trained.pt")
+            torch.save(model.state_dict(), dump_file)
+
         stats[d] = (train_loss, train_accuracy)
     return stats
 
 
-depths = [1]
-train_multilayer(depth=depths, epochs=5, batch_size=50, name="LNEXPMAX_grad", with_logs=False, save_params=False)
+depths = [0]
+train_multilayer(depth=depths, epochs=1, batch_size=50, name="BiSmorph", with_logs=False, save_params=False)

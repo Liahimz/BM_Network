@@ -14,8 +14,9 @@ def layer_func(kernel_shape, stride, alpha):
         @staticmethod
         def forward(ctx, x, k1, k2, bias):
             filter_height, filter_width, in_channels, out_channels = kernel_shape
-            x1_pathces = extract_image_patches(x, filter_height, stride)
-            x2_pathces = extract_image_patches(-x, filter_height, stride)
+            x_pathces = extract_image_patches(x, filter_height, stride)
+            x1_pathces = x_pathces
+            x2_pathces = -x_pathces
 
 
             x1_pathces = torch.unsqueeze(x1_pathces, 2)
@@ -69,10 +70,10 @@ def layer_func(kernel_shape, stride, alpha):
             # print(tmp.shape)
 
             # tmp = tmp.sum(0)
-            print(tmp.shape)
+            # print(tmp.shape)
             out_size = tmp.shape[1] // (kernel_shape[0] * kernel_shape[1])
-            tmp = F.fold(tmp, out_size, kernel_shape[0])
-            print(tmp.shape)
+            # tmp = F.fold(tmp, out_size, kernel_shape[0])
+            # print(tmp.shape)
             return tmp, (y1) * torch.unsqueeze(y_grad, 1), (y2) * torch.unsqueeze(y_grad, 1), y_grad
     return layer_func
 

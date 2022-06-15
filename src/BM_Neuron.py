@@ -154,8 +154,8 @@ class SMorphLayer(nn.Module):
         # x2_pathces = self.ln(-x)
 
         x1_pathces = extract_image_patches(x, filter_height, self.strides[0])
-        x2_pathces = extract_image_patches(-x, filter_height, self.strides[0])
-
+        # x2_pathces = extract_image_patches(-x, filter_height, self.strides[0])
+        x2_pathces = -x1_pathces
         x1_k1 = self.add_k1(x1_pathces)
         # x1_k2 = self.add_k2(x1_pathces)
 
@@ -170,6 +170,11 @@ class SMorphLayer(nn.Module):
         y11 = (self.smax(x1_k1))
         # y12 = (self.smax(x1_k2))
         y21 = (self.smax(x2_k2))
+
+        # y11 = ((x1_k1).max(1)[0])
+        # y11.register_hook(get_hook("y1"))
+        # y12 = (self.smax(x1_k2))
+        # y21 = ((x2_k2).max(1)[0])
         # y22 = (self.smax(x2_k2))
         y = y11 + y21 + self.bias[None, :, None, None]
         return y
@@ -204,9 +209,9 @@ class LnExpMaxLayer(nn.Module):
                  input_shape,
                  kernel_size)
         
-        # self.add_k2 = Add(filters,
-        #          input_shape,
-        #          kernel_size)
+        self.add_k2 = Add(filters,
+                 input_shape,
+                 kernel_size)
 
         self.lnxmax = LnExp_Max(alpha=self.alpha, layer=layer)
 
@@ -222,14 +227,18 @@ class LnExpMaxLayer(nn.Module):
 
     def forward(self, x):
         filter_height, filter_width, in_channels, out_channels = self.kernel_shape
+        # print(x)
         x1_pathces = extract_image_patches(x, filter_height, self.strides[0])
-        # x2_pathces = extract_image_patches(-x, filter_height, self.strides[0])
+        x2_pathces = -x1_pathces # extract_image_patches(-x, filter_height, self.strides[0]) #
         x1_k1 = self.add_k1(x1_pathces)
-        # x2_k2 = self.add_k2(x2_pathces)
+        x2_k2 = self.add_k2(x2_pathces)
         y11 = (self.lnxmax(x1_k1))
+        # y11 = ((x1_k1).max(1)[0])
         # y11 = (self.lmax(x1_k1))
-        # y22 = (self.lnxmax(x2_k2))
-        y = y11 + self.bias[None, :, None, None]
+        y22 = (self.lnxmax(x2_k2))
+        # y22 = ((x2_k2).max(1)[0])
+        # y11.register_hook(get_hook("y11"))
+        y = y11 + y22 + self.bias[None, :, None, None]
         return y
         
 

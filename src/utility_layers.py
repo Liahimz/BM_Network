@@ -6,7 +6,7 @@ from utils import *
 import torch.nn as nn
 from torch.autograd import Function
 
-USE_AUTOGRAD = True
+USE_AUTOGRAD = False
 
 def get_hook(name, layer=None):
     def print_hook(grad):
@@ -140,9 +140,17 @@ def smax_func(alpha, layer):
             # print("res",(res)[0, 0, 0, 0, :])
             # print("y_grad",(y_grad)[0, 0, 0, :])
             # print("y_grad non zero", torch.count_nonzero(y_grad))
-            print(torch.mean(res * torch.unsqueeze(y_grad, 1)))
+            # print(torch.std(res * torch.unsqueeze(y_grad, 1)))
             # exit(0)
-            return res * torch.unsqueeze(y_grad, 1) 
+            # out_grad = res * torch.unsqueeze(y_grad, 1)
+            # print(out_grad.shape)
+            # print(F.softmax(x[0, :, 0, 0, 0]))
+            # print(x[0, :, 0, 0, 0])
+            # print(res[0, :, 0, 0, 0])
+            # a = (out_grad - torch.unsqueeze(y_grad, 1))[0, 0, 0, :]
+            # print("a", a)
+            
+            return  res * torch.unsqueeze(y_grad, 1)
     return smax_func
 
 def lnexpmax_func(alpha, layer):
@@ -151,15 +159,15 @@ def lnexpmax_func(alpha, layer):
         def forward(ctx, x):
             eax = torch.exp(torch.mul(x, alpha))
             ctx.save_for_backward(eax)
-            print(torch.mean(x))
-            print(torch.mean(torch.log(torch.sum(eax, dim=1)) / alpha))
+            # print(torch.std(x))
+            # print(torch.std(torch.log(torch.sum(eax, dim=1)) / alpha))
             return torch.log(torch.sum(eax, dim=1)) / alpha
 
         @staticmethod
         def backward(ctx, y_grad):
             eax = ctx.saved_tensors[0]
             tmp = eax / torch.sum(eax, dim=1, keepdim=True)
-            # print(torch.mean(tmp * torch.unsqueeze(y_grad, 1)))
+            print(torch.std(tmp * torch.unsqueeze(y_grad, 1)))
             return tmp * torch.unsqueeze(y_grad, 1) 
     return lnexpmax_func
 
