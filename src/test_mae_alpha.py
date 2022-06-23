@@ -222,4 +222,4 @@ def train_GETMAE(alpha, epochs, batch_size=100, name="BM_NET",):
     return stats
 
 
-train_GETMAE(alpha=np.arange(10, 22), epochs=1, batch_size=50, name="BiSmorph")
+train_GETMAE(alpha=np.arange(1, 10), epochs=50, batch_size=50, name="BiSmorph")

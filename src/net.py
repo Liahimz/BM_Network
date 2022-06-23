@@ -42,26 +42,29 @@ class CNN_Net(nn.Module):
     def __init__(self, depth, shape):
         super().__init__()
         
-        layers = []
-        layers.append(nn.Conv2d(in_channels=1, out_channels=32, kernel_size = (3, 3)))
+        self.layers = []
+        self.layers.append(nn.Conv2d(in_channels=1, out_channels=32, kernel_size = (3, 3)))
         # layers.append(Conv2d(in_channels=1, out_channels=32, kernel_size = (3, 3), layer = 1))
-        layers.append(nn.ReLU())
-        out_shape = 32
+        self.layers.append(nn.ReLU())
+        # out_shape = 32
         for i in range(depth):
-            layers.append(nn.Conv2d(in_channels=out_shape, out_channels=16, kernel_size = (3, 3)))
+            self.layers.append(nn.Conv2d(in_channels=out_shape, out_channels=16, kernel_size = (3, 3)))
             # layers.append(Conv2d(in_channels=out_shape, out_channels=16, kernel_size = (3, 3), layer = i + 2))
-            layers.append(nn.ReLU())
+            self.layers.append(nn.ReLU())
             out_shape = 16
             
-        layers.append(nn.Flatten())
-        layers.append(nn.Linear(np.prod(size[depth]), 10))
-        layers.append(nn.Softmax(dim=1))
-        self.net = nn.Sequential(*layers)
+        self.layers.append(nn.Flatten())
+        self.layers.append(nn.Linear(np.prod(size[depth]), 10))
+        self.layers.append(nn.Softmax(dim=1))
+        # self.net = nn.Sequential(*layers)
 
     def forward(self, x):
         # xk = torch.tensor(x, requires_grad=True)
         # xk.register_hook(get_hook('x'))
-        return self.net(x)
+        # x1 = 
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 class Smorph_Net(nn.Module):
