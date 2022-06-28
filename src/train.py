@@ -15,6 +15,8 @@ from torch_tensorboard import *
 from os import path
 from datetime import datetime
 
+
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 print("device: ", device)
@@ -146,10 +148,14 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     for d in depth:
         # model = Smorph_Net(d, (1, 28, 28))
-        model = CNN_Net(d, (1, 28, 28))
+        model = KDLSE_Net(d, (1, 28, 28))
+        # model = Test_smorph(d, (1, 28, 28))
+        # model = Test_smorph(d, (1, 28, 28))
+        # layers = model.layers
+        # print(layers)
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -193,4 +199,4 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
 
 
 depths = [0]
-model = train_multilayer(depth=depths, epochs=15, batch_size=50, name="CNN", with_logs=False, save_params=True)
+model = train_multilayer(depth=depths, epochs=5, batch_size=50, name="LSE_net", with_logs=False, save_params=True)

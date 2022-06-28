@@ -78,16 +78,17 @@ def save_featuremap(model, data_getter, layer_type, name, idx = 0):
     for layer in conv_layers[0:]:
         image = layer(image)
         outputs.append(image)
-        names.append(str(layer))
+        names.append(str(layer) + name)
     # print(len(outputs))
     # #print feature_maps
-    # for feature_map in outputs:
-    #     print(feature_map.shape)
+    for feature_map in outputs:
+        print(feature_map.shape)
 
     processed = []
     for feature_map in outputs:
         feature_map = feature_map.squeeze(0)
         gray_scale = torch.sum(feature_map,0)
+        print(gray_scale.shape)
         gray_scale = gray_scale / feature_map.shape[0]
         processed.append(gray_scale.data.cpu().numpy())
     # for fm in processed:
@@ -98,8 +99,13 @@ def save_featuremap(model, data_getter, layer_type, name, idx = 0):
         a = fig.add_subplot(5, 4, i+1)
         imgplot = plt.imshow(processed[i])
         a.axis("off")
+        bar = plt.colorbar()
         a.set_title(names[i].split('(')[0], fontsize=30)
     plt.savefig(name + "_" + str(idx) + str('_feature_maps.png'), bbox_inches='tight')
+
+    return processed, names
+
+
 
 
 ###########################################################################

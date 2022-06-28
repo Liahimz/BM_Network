@@ -15,6 +15,8 @@ from torch_tensorboard import *
 from os import path
 from datetime import datetime
 
+from vizualize_utils import PlotLine
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 print("device: ", device)
@@ -49,8 +51,8 @@ def score(y_pred, y):
     N = len(y)
     return ((y_pred == y).sum() / N).item()
 
-def train(model, teacher_model, train_dataloader, criterion, 
-    optimizer, writer=None, n_epochs=1, show=False, verbose=10):
+def train(model, model_layers, teacher_model, teacher_model_layers, train_dataloader,
+    optimizer, scheduler, writer=None, n_epochs=1):
     
     model.train()
     teacher_model.eval()
@@ -58,14 +60,8 @@ def train(model, teacher_model, train_dataloader, criterion,
     accuracy_trace = []
     train_stat = []
 
-    teacher_model_children = list(model.children())
-
-    if writer is not None:
-        if (n_epochs == 1):
-            train_stat = Statistics(len(train_dataloader), writer, 'train')
-        else:
-            train_stat = Statistics(n_epochs, writer, 'train')
-
+    
+    stat = []
     for epoch_i in range(n_epochs):   
         mean_acc = None
         
@@ -74,18 +70,27 @@ def train(model, teacher_model, train_dataloader, criterion,
                 tepoch.set_description(f"Epoch {epoch_i}")
                 x, y = x.to(device), y.to(device)  
 
-                teacher_pred = teacher_model(x)
-                conv_layers = []
-                for i in range(len(teacher_model_children)):
-                    for item in teacher_model_children[i]:
-                        if type(item) == nn.Conv2d:
-                            conv_layers.append(item)
-                teacher_output = conv_layers[-1](x)
+                model_output = model_layers[0](x).sum(1)[0]
+                teacher_output = teacher_model_layers[0](x).sum(1)[0]
+
+                # print(model_layers[3](x).shape)
 
                 optimizer.zero_grad()          
                 pred = model(x)
-                loss = criterion(pred, teacher_output)
+
+                # print((nn.CrossEntropyLoss()(pred, y)).item())
+                # print((nn.MSELoss()(model_output, teacher_output)).item())
+
+                mse_loss = (nn.MSELoss()(model_output, teacher_output)).item()
+                if iter_i > 0:
+                    stat.append(0.6 * mse_loss + 0.4 * stat[-1])
+                else:
+                    stat.append(mse_loss)
+
+                alpha = 0.1
+                loss = alpha * (nn.CrossEntropyLoss()(pred, y)) + (1 - alpha) * (nn.MSELoss()(model_output, teacher_output))
                 loss.backward()
+                
                 optimizer.step()
                 loss_trace.append(loss.item())
                 y_pred = predict(pred)
@@ -100,20 +105,35 @@ def train(model, teacher_model, train_dataloader, criterion,
                     train_stat.append(loss_trace[-1], accuracy_trace[-1], [0], [0], iter_i)
 
                 tepoch.set_postfix(loss=loss_trace[-1], mean_accuracy = mean_acc, batch_accuracy=accuracy_trace[-1])
+
+        scheduler.step()
+    # fig = plt.figure(figsize=(30, 50))
+    # plt.plot(stat)
+    # fig = plt.figure()
+    # plt.plot(stat)
+    # plt.savefig("pics/" + str('_mse_raiting.png'), bbox_inches='tight')
+    # plt.close(fig)
+    
+    PlotLine(np.arange(len(stat)), stat, "mse_raiting")
+    
     return loss_trace[-1], accuracy_trace[-1]
 
 
 def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = False, save_params = False):
     stats = {}
     for d in depth:
-        model = Smorph_Net(d, (1, 28, 28))
-        teacher_model = CNN_Net(d, (1, 28, 28))
-        model = model.to(device)
-        teacher_model.to(device)
-        teacher_model.load_state_dict(torch.load('models/CNN_3_23-06-2022_14:53:03_trained.pt'))
+        model = KDSmorph_Net(d, (1, 28, 28))
+        model_layers = model.layers
+        teacher_model = KDCNN_Net(d, (1, 28, 28))
+        teacher_model_layers = teacher_model.layers
 
-        criterion = torch.nn.MSELoss()
+        model = model.to(device)
+        teacher_model = teacher_model.to(device)
+        teacher_model.load_state_dict(torch.load('models/KDCNN_0_27-06-2022_13:36:10_trained.pt'))
+
+        # criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 40], gamma=0.1)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -125,9 +145,9 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
 
         train_dataloader, test_dataloader = mnist(batch_size)
 
-        train_loss, train_accuracy = train(model, train_dataloader, test_dataloader,
-                                    criterion, optimizer, writer,
-                                    n_epochs=epochs, show=False)
+        train_loss, train_accuracy = train(model, model_layers, teacher_model, teacher_model_layers, train_dataloader,
+                                    optimizer, scheduler, writer,
+                                    n_epochs=epochs)
 
         if save_params:
             models = "models/"
@@ -136,3 +156,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
 
         stats[d] = (train_loss, train_accuracy)
     return model
+
+
+depths = [0]
+model = train_multilayer(depth=depths, epochs=60, batch_size=50, name="KD+Smorph+blending=0.1_60epochs+sheduler", with_logs=False, save_params=False)

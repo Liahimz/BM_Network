@@ -6,7 +6,7 @@ from utils import *
 import torch.nn as nn
 from torch.autograd import Function
 
-USE_AUTOGRAD = False
+USE_AUTOGRAD = True
 
 def get_hook(name, layer=None):
     def print_hook(grad):
@@ -167,7 +167,7 @@ def lnexpmax_func(alpha, layer):
         def backward(ctx, y_grad):
             eax = ctx.saved_tensors[0]
             tmp = eax / torch.sum(eax, dim=1, keepdim=True)
-            print(torch.std(tmp * torch.unsqueeze(y_grad, 1)))
+            # print(torch.std(tmp * torch.unsqueeze(y_grad, 1)))
             return tmp * torch.unsqueeze(y_grad, 1) 
     return lnexpmax_func
 
