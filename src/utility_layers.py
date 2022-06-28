@@ -219,6 +219,7 @@ class Add(nn.Module):
             x = torch.unsqueeze(x, 2)
             k_for_patches = self.k.view(filter_height * filter_width * in_channels, out_channels)
             xk = x + k_for_patches[None, :, :, None, None]
+            # xk = x * k_for_patches[None, :, :, None, None]
             return xk
         return self.add_forward.apply(x, self.k)
         

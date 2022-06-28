@@ -1,4 +1,4 @@
-import imp
+# import imp
 from statistics import mode
 from time import sleep
 import torch
@@ -29,28 +29,29 @@ device = torch.device("cpu")
 
 ans = []
 
-model = KDSmorph_Net(0, (1, 28, 28))
-model.load_state_dict(torch.load('models/SMORPH_0_27-06-2022_13:59:35_trained.pt'))
-model.to(device)
-ans.append(save_featuremap(model, mnist, SMorphLayer, "Smorph", 5))
+# model = KDLSE_Net(0, (1, 28, 28))
+# model.load_state_dict(torch.load('models/LSE_net_0_28-06-2022_15:15:25_trained.pt'))
+# model.to(device)
+# ans.append(save_featuremap(model, mnist, LnExpMaxLayer, "LSE_single", 5, 6))
 
-model = KDSmorph_Net(0, (1, 28, 28))
-model.load_state_dict(torch.load('models/KD+Smorph+blending=0.1_60epochs+sheduler_0_27-06-2022_21:11:56_trained.pt'))
-model.to(device)
-ans.append(save_featuremap(model, mnist, SMorphLayer, "KD", 5))
+model1 = KDLSE_Net(0, (1, 28, 28))
+model1.load_state_dict(torch.load('models/KDLSE+test_0_28-06-2022_20:29:53_trained.pt'))
+model1.to(device)
+ans.append(save_featuremap(model1, mnist, LnExpMaxLayer, "KDLSE_test", 5, 6))
 
-model = KDCNN_Net(0, (1, 28, 28))
-model.load_state_dict(torch.load('models/KDCNN_0_27-06-2022_13:36:10_trained.pt'))
-model.to(device)
-ans.append(save_featuremap(model, mnist, nn.Conv2d, "CNN", 5))
+
+model2 = KDCNN_Net(0, (1, 28, 28))
+model2.load_state_dict(torch.load('models/KDCNN_0_27-06-2022_13:36:10_trained.pt'))
+model2.to(device)
+ans.append(save_featuremap(model2, mnist, nn.Conv2d, "CNN_single", 5, 6))
 
 
 min_v = 10
 max_v = -10
-add_const = 0.77
+# add_const = 0.77
 for processed, names in ans:
     for item in processed:
-        item += add_const
+        # item += add_const
         if item.min() < min_v:
             min_v = item.min()
         if item.max() > max_v:
@@ -62,12 +63,13 @@ print(min_v, max_v)
 colors = plt.cm.inferno(np.linspace(min_v, max_v, 15))
 mymap = mcolors.LinearSegmentedColormap.from_list('my_colormap', colors)
 
-fig = plt.figure(figsize=(30, 30))
+fig = plt.figure(figsize=(50, 50))
 for j in range(len(ans)):
     processed, names = ans[j]
+    print(names)
     for i in range(len(processed)):
-        a = fig.add_subplot(1, 3, j + i+1)
-        processed[i] = (processed[i] - min_v) / (max_v - min_v)
+        a = fig.add_subplot(3, 6, 6 * j + i + 1)
+        # processed[i] = (processed[i] - min_v) / (max_v - min_v)
         processed[i][0][0] = min_v
         processed[i][0][1] = max_v
         imgplot = plt.imshow(processed[i])
@@ -75,7 +77,7 @@ for j in range(len(ans)):
         bar = plt.colorbar(orientation='horizontal')
         bar.ax.tick_params(labelsize=20) 
         a.set_title(names[i].split('(')[0], fontsize=20)
-plt.savefig("total_feature", bbox_inches='tight')
+plt.savefig("total_feature_test", bbox_inches='tight')
 plt.close(fig)
 
 

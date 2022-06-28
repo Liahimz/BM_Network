@@ -70,16 +70,17 @@ def train(model, model_layers, teacher_model, teacher_model_layers, train_datalo
                 tepoch.set_description(f"Epoch {epoch_i}")
                 x, y = x.to(device), y.to(device)  
 
-                model_output = model_layers[0](x).sum(1)[0]
-                teacher_output = teacher_model_layers[0](x).sum(1)[0]
+                model_output = model_layers[0](x)
+                teacher_output = teacher_model_layers[0](x)
 
-                # print(model_layers[3](x).shape)
 
                 optimizer.zero_grad()          
                 pred = model(x)
+                # teacher_pred = teacher_model(x)
 
-                # print((nn.CrossEntropyLoss()(pred, y)).item())
-                # print((nn.MSELoss()(model_output, teacher_output)).item())
+                # if epoch_i > 3:
+                #     print((nn.CrossEntropyLoss()(pred, y)).item())
+                #     print((nn.MSELoss()(model_output, teacher_output)).item())
 
                 mse_loss = (nn.MSELoss()(model_output, teacher_output)).item()
                 if iter_i > 0:
@@ -87,8 +88,9 @@ def train(model, model_layers, teacher_model, teacher_model_layers, train_datalo
                 else:
                     stat.append(mse_loss)
 
-                alpha = 0.1
+                alpha = 0.000001
                 loss = alpha * (nn.CrossEntropyLoss()(pred, y)) + (1 - alpha) * (nn.MSELoss()(model_output, teacher_output))
+                # loss = alpha * (nn.MSELoss()(pred, teacher_pred)) + (1 - alpha) * (nn.MSELoss()(model_output, teacher_output))
                 loss.backward()
                 
                 optimizer.step()
@@ -114,17 +116,16 @@ def train(model, model_layers, teacher_model, teacher_model_layers, train_datalo
     # plt.savefig("pics/" + str('_mse_raiting.png'), bbox_inches='tight')
     # plt.close(fig)
     
-    PlotLine(np.arange(len(stat)), stat, "mse_raiting")
-    
-    return loss_trace[-1], accuracy_trace[-1]
+    return loss_trace[-1], accuracy_trace[-1], stat
 
 
 def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = False, save_params = False):
     stats = {}
+    #just for now depth is alpha
     for d in depth:
-        model = KDSmorph_Net(d, (1, 28, 28))
+        model = KDLSE_Net(0, (1, 28, 28), d)
         model_layers = model.layers
-        teacher_model = KDCNN_Net(d, (1, 28, 28))
+        teacher_model = KDCNN_Net(0, (1, 28, 28))
         teacher_model_layers = teacher_model.layers
 
         model = model.to(device)
@@ -133,7 +134,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
 
         # criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[15, 40], gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 70], gamma=0.1)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -145,18 +146,20 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
 
         train_dataloader, test_dataloader = mnist(batch_size)
 
-        train_loss, train_accuracy = train(model, model_layers, teacher_model, teacher_model_layers, train_dataloader,
+        train_loss, train_accuracy, stat = train(model, model_layers, teacher_model, teacher_model_layers, train_dataloader,
                                     optimizer, scheduler, writer,
                                     n_epochs=epochs)
 
         if save_params:
             models = "models/"
-            dump_file = path.join(models, model_name + "_trained.pt")
+            dump_file = path.join(models, model_name + "_alpha=" + str(d) +"_trained.pt")
             torch.save(model.state_dict(), dump_file)
+
+            PlotLine(np.arange(len(stat)), stat, model_name + "_alpha=" + str(d) + "mse_rating")
 
         stats[d] = (train_loss, train_accuracy)
     return model
 
 
-depths = [0]
-model = train_multilayer(depth=depths, epochs=60, batch_size=50, name="KD+Smorph+blending=0.1_60epochs+sheduler", with_logs=False, save_params=False)
+depths = [0.1, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22]
+model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="KDLSE_alpha_test", with_logs=False, save_params=True)

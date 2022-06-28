@@ -26,7 +26,7 @@ def PlotScatter(X, y, plot_name):
                                  line=dict(color='black', width=0.3)))
     
     fig.write_image("pics/" + plot_name +  ".png")
-    plotly.offline.plot(fig, filename=plot_name + '.html')
+    plotly.offline.plot(fig, filename="html/" + plot_name + '.html')
     return fig
 
 def PlotLine(X, y, plot_name):
@@ -53,7 +53,7 @@ def PlotLine(X, y, plot_name):
                                  line=dict(color='black', width=0.3)))
     
     fig.write_image("pics/" + plot_name +  ".png")
-    plotly.offline.plot(fig, filename=plot_name + '.html')
+    plotly.offline.plot(fig, filename="html/" + plot_name + '.html')
     return fig
 
 def Plot3D(X, y, plot_name):

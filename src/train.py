@@ -198,5 +198,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return model
 
 
-depths = [0]
-model = train_multilayer(depth=depths, epochs=5, batch_size=50, name="LSE_net", with_logs=False, save_params=True)
+# depths = [0]
+# model = train_multilayer(depth=depths, epochs=5, batch_size=50, name="LSE_net", with_logs=False, save_params=True)

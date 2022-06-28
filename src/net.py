@@ -300,19 +300,19 @@ class KDSmorph_Net(nn.Module):
 
 class KDLSE_Net(nn.Module):
 
-    def __init__(self, depth, shape):
+    def __init__(self, depth, shape, alpha = 1):
         super().__init__()
         
         self.shape = shape
         self.depth = depth
         self.layers = []
-        self.layers.append(LnExpMaxLayer(filters=32, kernel_size = (3, 3), input_shape=shape, alpha=2.5, layer=1))
+        self.layers.append(LnExpMaxLayer(filters=32, kernel_size = (3, 3), input_shape=shape, alpha=alpha, layer=1))
         self.layers.append(nn.ReLU())
         out_shape = shape
 
         for i in range(depth):
             out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)
-            self.layers.append(LnExpMaxLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, alpha=2, layer=i + 2))
+            self.layers.append(LnExpMaxLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, alpha=alpha, layer=i + 2))
             self.layers.append(nn.ReLU())
             
         out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)

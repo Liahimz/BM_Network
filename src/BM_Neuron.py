@@ -201,7 +201,7 @@ class LnExpMaxLayer(nn.Module):
 
         self.bias = torch.nn.Parameter(torch.zeros(self.filters, requires_grad=True))
 
-        self.alpha = alpha #nn.Parameter(torch.tensor(1., requires_grad=True))
+        self.alpha =  alpha #nn.Parameter(torch.tensor(2.5, requires_grad=True)) #
 
         self.batch_norm = nn.BatchNorm2d(filters)
 
