@@ -161,5 +161,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return model
 
 
-depths = [0.1, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22]
+depths = [0.5, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22]
 model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="KDLSE_alpha_test", with_logs=False, save_params=True)
