@@ -1,0 +1,18 @@
+alpha of layer 0 = Parameter containing:
+tensor(15.2194, device='cuda:0', requires_grad=True)
+alpha of layer 2 = Parameter containing:
+tensor(14.9215, device='cuda:0', requires_grad=True)
+alpha of layer 4 = Parameter containing:
+tensor(15.0778, device='cuda:0', requires_grad=True)
+alpha of layer 6 = Parameter containing:
+tensor(15.1043, device='cuda:0', requires_grad=True)
+alpha of layer 8 = Parameter containing:
+tensor(14.9978, device='cuda:0', requires_grad=True)
+alpha of layer 10 = Parameter containing:
+tensor(15.0293, device='cuda:0', requires_grad=True)
+alpha of layer 12 = Parameter containing:
+tensor(14.9325, device='cuda:0', requires_grad=True)
+alpha of layer 14 = Parameter containing:
+tensor(14.6482, device='cuda:0', requires_grad=True)
+alpha of layer 16 = Parameter containing:
+tensor(14.8614, device='cuda:0', requires_grad=True)
