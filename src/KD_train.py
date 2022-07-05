@@ -123,9 +123,9 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     #just for now depth is alpha
     for d in depth:
-        model = KDLSE_Net(0, (1, 28, 28), d)
+        model = LSE_Net(0, (1, 28, 28), d)
         model_layers = model.layers
-        teacher_model = KDCNN_Net(0, (1, 28, 28))
+        teacher_model = CNN_Net(0, (1, 28, 28))
         teacher_model_layers = teacher_model.layers
 
         model = model.to(device)
@@ -161,5 +161,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return model
 
 
-depths = [0.5, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22]
+depths = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22]
 model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="KDLSE_alpha_test", with_logs=False, save_params=True)
