@@ -15,6 +15,8 @@ from torch_tensorboard import *
 from os import path
 from datetime import datetime
 
+
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 print("device: ", device)
@@ -23,12 +25,12 @@ def mnist(batch_size):
     
     transform = transforms.Compose([transforms.ToTensor()])
 
-    # trainset = torchvision.datasets.MNIST(root='./data/mnist', train=True, download=True, transform=transform)
-    trainset = torchvision.datasets.FashionMNIST(root='./data/f_mnist', train=True, download=True, transform=transform)
+    trainset = torchvision.datasets.MNIST(root='./data/mnist', train=True, download=True, transform=transform)
+    # trainset = torchvision.datasets.FashionMNIST(root='./data/f_mnist', train=True, download=True, transform=transform)
     train_dataloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=1)
 
-    # testset = torchvision.datasets.MNIST(root='./data/mnist', train=False, download=True, transform=transform)
-    testset = torchvision.datasets.FashionMNIST(root='./data/f_mnist', train=False, download=True, transform=transform)
+    testset = torchvision.datasets.MNIST(root='./data/mnist', train=False, download=True, transform=transform)
+    # testset = torchvision.datasets.FashionMNIST(root='./data/f_mnist', train=False, download=True, transform=transform)
     test_dataloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=1)
     
     return train_dataloader, test_dataloader
@@ -145,11 +147,15 @@ def train(model, train_dataloader, test_dataloader, criterion,
 def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = False, save_params = False):
     stats = {}
     for d in depth:
-        model = Smorph_Net(d, (1, 28, 28))
-        # model = LeNet(d, (1, 28, 28))
+        # model = Smorph_Net(d, (1, 28, 28))
+        model = KDLSE_Net(d, (1, 28, 28))
+        # model = Test_smorph(d, (1, 28, 28))
+        # model = Test_smorph(d, (1, 28, 28))
+        # layers = model.layers
+        # print(layers)
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -162,13 +168,13 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
             logs = "logs/"
             writer = tb.writer.SummaryWriter(path.join(logs, model_name))
 
-        if save_params:
-            # params = "params/"
-            # dump_file = open(path.join(params, model_name), "w")
+        # if save_params:
+        #     # params = "params/"
+        #     # dump_file = open(path.join(params, model_name), "w")
 
-            models = "models/"
-            path_file = path.join(models, model_name + ".pt")
-            torch.save(model.state_dict(), path_file)
+        #     models = "models/"
+        #     path_file = path.join(models, model_name + ".pt")
+        #     torch.save(model.state_dict(), path_file)
 
         train_dataloader, test_dataloader = mnist(batch_size)
 
@@ -189,8 +195,8 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
             torch.save(model.state_dict(), dump_file)
 
         stats[d] = (train_loss, train_accuracy)
-    return stats
+    return model
 
 
-depths = [0]
-train_multilayer(depth=depths, epochs=1, batch_size=50, name="BiSmorph", with_logs=False, save_params=False)
+# depths = [0]
+# model = train_multilayer(depth=depths, epochs=5, batch_size=50, name="LSE_net", with_logs=False, save_params=True)

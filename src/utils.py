@@ -1,6 +1,8 @@
 import math
 import torch.nn.functional as F
 import torch
+import torch.nn as nn
+import matplotlib.pyplot as plt
 
 def extract_image_patches(x, kernel, stride=1, dilation=1):
     # print(x.shape)
@@ -27,6 +29,95 @@ def smooth_max(input_tensor, dim = 1, alpha = 1):
     ax = torch.exp(torch.mul(input_tensor, alpha))
     s_max = torch.mul(input_tensor, ax / torch.sum(ax, dim=dim, keepdims=True))
     return torch.sum(s_max, dim=dim)
+
+
+def save_featuremap(model, data_getter, layer_type, name, idx = 0, num_features = 3):
+    device = torch.device("cpu")
+    model.to(device)
+    torch.manual_seed(0)
+    conv_layers = []
+    model_children = list(model.children())
+
+    # for i in range(len(model_children)):
+    #     if type(model_children[i]) == layer_type:
+    #         counter+=1
+    #         try:
+    #             model_weights.append(model_children[i].weight)
+    #         except AttributeError:
+    #             model_weights.append(item.add_k1.k)
+    #             model_weights.append(item.add_k2.k)
+    #         conv_layers.append(model_children[i])
+    #     elif type(model_children[i]) == nn.Sequential:
+    #         # print(model_children[i])
+    #         for item in model_children[i]:
+    #             # print(item)
+    #         # for j in range(len(model_children[i])):
+    #         #     for child in model_children[i][j].children():
+    #         #         print(child)
+    #             if type(item) == layer_type:
+    #                 counter+=1
+    #                 try:
+    #                     model_weights.append(item.weight)
+    #                 except AttributeError:
+    #                     model_weights.append(item.add_k1.k)
+    #                     model_weights.append(item.add_k2.k)
+    #                 conv_layers.append(item)
+    
+    for i in range(len(model_children)):
+        if type(model_children[i]) == layer_type:
+            conv_layers.append(model_children[i])
+        elif type(model_children[i]) == nn.Sequential:
+            for item in model_children[i]:
+                if type(item) == layer_type:
+                    conv_layers.append(item)
+
+    # print(conv_layers)
+    train_dataloader, test_dataloader = data_getter(1)
+
+    image, labels = next(iter(train_dataloader))
+    for i in range(idx):
+        image, labels = next(iter(train_dataloader))
+    image = image.to(device)
+
+    outputs = []
+    names = []
+    
+    for layer in conv_layers[0:]:
+        image = layer(image)
+        outputs.append(image)
+        index = str(layer).find("(")
+        layer_name = str(layer)[:index]
+        for i in range(num_features):
+            names.append(layer_name + "_" +name)
+    # print(len(outputs))
+    # #print feature_maps
+    for feature_map in outputs:
+        print(feature_map.shape)
+
+    processed = []
+    for feature_map in outputs:
+        feature_map = feature_map.squeeze(0)
+        print(feature_map.shape)
+        for i in range(num_features):
+            # gray_scale = torch.sum(feature_map,0)
+            gray_scale = feature_map[i, :, :]
+            print(gray_scale.shape)
+            gray_scale = gray_scale / feature_map.shape[0]
+            processed.append(gray_scale.data.cpu().numpy())
+    # for fm in processed:
+    #     print(fm.shape)
+
+    fig = plt.figure(figsize=(30, 50))
+    for i in range(len(processed)):
+        a = fig.add_subplot(5, 4, i+1)
+        imgplot = plt.imshow(processed[i])
+        a.axis("off")
+        bar = plt.colorbar()
+        a.set_title(names[i].split('(')[0], fontsize=30)
+    plt.savefig(name + "_" + str(idx) + str('_feature_maps.png'), bbox_inches='tight')
+
+    return processed, names
+
 
 
 
