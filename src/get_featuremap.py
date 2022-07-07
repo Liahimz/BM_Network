@@ -29,21 +29,21 @@ device = torch.device("cpu")
 
 ans = []
 
-# model = KDLSE_Net(0, (1, 28, 28))
-# model.load_state_dict(torch.load('models/LSE_net_0_28-06-2022_15:15:25_trained.pt'))
-# model.to(device)
-# ans.append(save_featuremap(model, mnist, LnExpMaxLayer, "LSE_single", 5, 6))
+model = MorphSmax_Net(0, (1, 28, 28))
+model.load_state_dict(torch.load('models/BM_Net_Smax_0_05-07-2022_15:05:06_trained.pt'))
+model.to(device)
+ans.append(save_featuremap(model, mnist, BMLayer_Smax, "SoftMax_BM", 5, 6))
 
-model1 = KDLSE_Net(0, (1, 28, 28))
-model1.load_state_dict(torch.load('models/KDLSE+test_0_28-06-2022_20:29:53_trained.pt'))
+model1 = Morph_Net(0, (1, 28, 28))
+model1.load_state_dict(torch.load('models/BM_Net_0_05-07-2022_14:48:33_trained.pt'))
 model1.to(device)
-ans.append(save_featuremap(model1, mnist, LnExpMaxLayer, "KDLSE_test", 5, 6))
+ans.append(save_featuremap(model1, mnist, MorphLayer, "BM", 5, 6))
 
 
-model2 = KDCNN_Net(0, (1, 28, 28))
+model2 = CNN_Net(0, (1, 28, 28))
 model2.load_state_dict(torch.load('models/KDCNN_0_27-06-2022_13:36:10_trained.pt'))
 model2.to(device)
-ans.append(save_featuremap(model2, mnist, nn.Conv2d, "CNN_single", 5, 6))
+ans.append(save_featuremap(model2, mnist, nn.Conv2d, "CNN", 5, 6))
 
 
 min_v = 10
@@ -77,7 +77,7 @@ for j in range(len(ans)):
         bar = plt.colorbar(orientation='horizontal')
         bar.ax.tick_params(labelsize=20) 
         a.set_title(names[i].split('(')[0], fontsize=20)
-plt.savefig("total_feature_test", bbox_inches='tight')
+plt.savefig("SMAXBM_BM_CNN", bbox_inches='tight')
 plt.close(fig)
 
 

@@ -123,7 +123,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     #just for now depth is alpha
     for d in depth:
-        model = LSE_Net(0, (1, 28, 28), d)
+        model = MorphSmax_Net(0, (1, 28, 28), alpha=d)
         model_layers = model.layers
         teacher_model = CNN_Net(0, (1, 28, 28))
         teacher_model_layers = teacher_model.layers
@@ -152,14 +152,14 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
 
         if save_params:
             models = "models/"
-            dump_file = path.join(models, model_name + "_alpha=" + str(d) +"_trained.pt")
+            dump_file = path.join(models, model_name +"_trained.pt")
             torch.save(model.state_dict(), dump_file)
 
-            PlotLine(np.arange(len(stat)), stat, model_name + "_alpha=" + str(d) + "mse_rating")
+            PlotLine(np.arange(len(stat)), stat, model_name + "mse_rating")
 
         stats[d] = (train_loss, train_accuracy)
     return model
 
 
-depths = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22]
-model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="KDLSE_alpha_test", with_logs=False, save_params=True)
+depths = [2] #, 6, 8, 10, 12, 14, 16, 18, 22
+model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="BM_Net_Smax_1", with_logs=False, save_params=True)

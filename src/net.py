@@ -95,18 +95,18 @@ class Smorph_Net(nn.Module):
 
 class LSE_Net(nn.Module):
 
-    def __init__(self, depth, shape):
+    def __init__(self, depth, shape, alpha=1):
         super().__init__()
         
         self.layers = []
-        self.layers.append(LnExpMaxLayer(filters=32, kernel_size = (3, 3), input_shape=shape, alpha=50))
+        self.layers.append(LnExpMaxLayer(filters=32, kernel_size = (3, 3), input_shape=shape, alpha=alpha))
         # self.layers.append(nn.ReLU())
         self.layers.append(nn.Tanh())
         out_shape = shape
         for i in range(depth):
             out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)
             print(out_shape)
-            self.layers.append(LnExpMaxLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, alpha=40))
+            self.layers.append(LnExpMaxLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, alpha=alpha))
             # self.layers.append(nn.ReLU())
             self.layers.append(nn.Tanh())
             
@@ -123,7 +123,7 @@ class LSE_Net(nn.Module):
 
 class Morph_Net(nn.Module):
 
-    def __init__(self, depth, shape):
+    def __init__(self, depth, shape, alpha = 1):
         super().__init__()
 
         coefs = []
@@ -139,6 +139,36 @@ class Morph_Net(nn.Module):
             out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)
             # print(out_shape)
             self.layers.append(MorphLayer(filters=16, kernel_size = (3, 3), input_shape=out_shape, grad_coef = coefs[i + 1], layer= i + 1))
+            self.layers.append(nn.ReLU())
+            
+        out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)
+        self.layers.append(nn.Flatten())
+        self.layers.append(nn.Linear(np.prod(out_shape), 10))
+        # self.layers.append(nn.Softmax(dim=1))
+        self.net = nn.Sequential(*self.layers)
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class MorphSmax_Net(nn.Module):
+
+    def __init__(self, depth, shape, alpha = 1):
+        super().__init__()
+
+        coefs = []
+        for i in reversed(range(depth + 1)):
+            coefs.append(np.power(10, i))
+       
+        self.layers = []
+        self.layers.append(BMLayer_Smax(filters=32, kernel_size = (3, 3), input_shape=shape, grad_coef=coefs[0], layer=1, alpha=alpha))
+        self.layers.append(nn.ReLU())
+        out_shape = shape
+
+        for i in range(depth):
+            out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)
+            # print(out_shape)
+            self.layers.append(BMLayer_Smax(filters=16, kernel_size = (3, 3), input_shape=out_shape, grad_coef = coefs[i + 1], layer= i + 1, alpha=alpha))
             self.layers.append(nn.ReLU())
             
         out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)
