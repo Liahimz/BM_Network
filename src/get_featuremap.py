@@ -29,10 +29,15 @@ device = torch.device("cpu")
 
 ans = []
 
-model = MorphSmax_Net(0, (1, 28, 28))
-model.load_state_dict(torch.load('models/BM_Net_Smax_0_05-07-2022_15:05:06_trained.pt'))
+model = MorphSmax_NetBiased(0, (1, 28, 28))
+model.load_state_dict(torch.load('models/BM_Net_Smax_1.5line_200_1_07-07-2022_18:28:48_trained.pt'))
 model.to(device)
-ans.append(save_featuremap(model, mnist, BMLayer_Smax, "SoftMax_BM", 5, 6))
+ans.append(save_featuremap(model, mnist, BMLayer_Smax_Biased, "SoftMax_BM_biased", 5, 6))
+
+# model1 = MorphSmax_Net(0, (1, 28, 28))
+# model1.load_state_dict(torch.load('models/BM_Net_Smax_0_05-07-2022_15:05:06_trained.pt'))
+# model1.to(device)
+# ans.append(save_featuremap(model1, mnist, BMLayer_Smax, "SoftMax_BM", 5, 6))
 
 model1 = Morph_Net(0, (1, 28, 28))
 model1.load_state_dict(torch.load('models/BM_Net_0_05-07-2022_14:48:33_trained.pt'))
@@ -77,7 +82,7 @@ for j in range(len(ans)):
         bar = plt.colorbar(orientation='horizontal')
         bar.ax.tick_params(labelsize=20) 
         a.set_title(names[i].split('(')[0], fontsize=20)
-plt.savefig("SMAXBM_BM_CNN", bbox_inches='tight')
+plt.savefig("SMAXBMBiased_BM_CNN", bbox_inches='tight')
 plt.close(fig)
 
 

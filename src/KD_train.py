@@ -123,7 +123,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     #just for now depth is alpha
     for d in depth:
-        model = MorphSmax_Net(0, (1, 28, 28), alpha=d)
+        model = MorphSmax_NetBiased(0, (1, 28, 28), alpha=d)
         model_layers = model.layers
         teacher_model = CNN_Net(0, (1, 28, 28))
         teacher_model_layers = teacher_model.layers
@@ -132,9 +132,11 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
         teacher_model = teacher_model.to(device)
         teacher_model.load_state_dict(torch.load('models/KDCNN_0_27-06-2022_13:36:10_trained.pt'))
 
+        # model.load_state_dict(torch.load('models/CNN_Net_Smax_1line_1_07-07-2022_17:37:25_trained.pt'))
+
         # criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 70], gamma=0.1)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[40, 150, 180], gamma=0.1)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -161,5 +163,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return model
 
 
-depths = [2] #, 6, 8, 10, 12, 14, 16, 18, 22
-model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="BM_Net_Smax_1", with_logs=False, save_params=True)
+depths = [1] #, 6, 8, 10, 12, 14, 16, 18, 22
+model = train_multilayer(depth=depths, epochs=200, batch_size=100, name="BM_Net_1.5TEST_200", with_logs=False, save_params=True)
