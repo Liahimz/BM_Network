@@ -91,7 +91,7 @@ def test(model, criterion, test_dataloader):
     return total_accuracy.item(), sum(total_loss) / len(total_loss)
     
 def train(model, train_dataloader, test_dataloader, criterion, 
-    optimizer, writer=None, n_epochs=1, show=False, verbose=10):
+    optimizer, scheduler, writer=None, n_epochs=1, show=False, verbose=10):
     
     model.train()
     loss_trace = []
@@ -137,6 +137,7 @@ def train(model, train_dataloader, test_dataloader, criterion,
         if (n_epochs != 1 and writer is not None):
             train_stat.append(loss_trace[-1], mean_acc, total_loss, test_accuracy, epoch_i)
 
+        scheduler.step()
         # test_accuracy = test(model, test_dataloader)
         # print(f'test  accuracy: {test_accuracy:.3f}')
 
@@ -148,14 +149,15 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     for d in depth:
         # model = Smorph_Net(d, (1, 28, 28))
-        model = KDLSE_Net(d, (1, 28, 28))
+        model = CNN_Net(d, (1, 28, 28))
         # model = Test_smorph(d, (1, 28, 28))
         # model = Test_smorph(d, (1, 28, 28))
         # layers = model.layers
         # print(layers)
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 160, 190], gamma=0.1)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -179,7 +181,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
         train_dataloader, test_dataloader = mnist(batch_size)
 
         train_loss, train_accuracy = train(model, train_dataloader, test_dataloader,
-                                    criterion, optimizer, writer,
+                                    criterion, optimizer, scheduler, writer,
                                     n_epochs=epochs, show=False)
 
         if dump_file is not None:
@@ -198,5 +200,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return model
 
 
-# depths = [0]
-# model = train_multilayer(depth=depths, epochs=5, batch_size=50, name="LSE_net", with_logs=False, save_params=True)
+depths = [1, 2, 3, 4]
+model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="KDCNN", with_logs=False, save_params=True)

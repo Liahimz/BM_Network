@@ -46,7 +46,7 @@ class CNN_Net(nn.Module):
         self.layers.append(nn.Conv2d(in_channels=1, out_channels=32, kernel_size = (3, 3)))
         # layers.append(Conv2d(in_channels=1, out_channels=32, kernel_size = (3, 3), layer = 1))
         self.layers.append(nn.ReLU())
-        # out_shape = 32
+        out_shape = 32
         for i in range(depth):
             self.layers.append(nn.Conv2d(in_channels=out_shape, out_channels=16, kernel_size = (3, 3)))
             # layers.append(Conv2d(in_channels=out_shape, out_channels=16, kernel_size = (3, 3), layer = i + 2))
@@ -189,14 +189,14 @@ class MorphSmax_NetBiased(nn.Module):
             coefs.append(np.power(10, i))
        
         self.layers = []
-        self.layers.append(BMLayer_Smax_Biased(filters=32, kernel_size = (3, 3), input_shape=shape, grad_coef=coefs[0], layer=1, alpha=alpha))
+        self.layers.append(BMLayer_Smax_Biased(filters=32, kernel_size = (3, 3), input_shape=shape, layer=1, alpha=alpha))
         self.layers.append(nn.ReLU())
         out_shape = shape
 
         for i in range(depth):
             out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)
             # print(out_shape)
-            self.layers.append(BMLayer_Smax_Biased(filters=16, kernel_size = (3, 3), input_shape=out_shape, grad_coef = coefs[i + 1], layer= i + 1, alpha=alpha))
+            self.layers.append(BMLayer_Smax_Biased(filters=16, kernel_size = (3, 3), input_shape=out_shape, layer= i + 1, alpha=alpha))
             self.layers.append(nn.ReLU())
             
         out_shape = self.layers[-2].compute_output_shape(input_shape=out_shape)

@@ -430,7 +430,6 @@ class BMLayer_Smax_Biased(nn.Module):
                  min_val=1e-9,
                  padding='VALID',
                  strides=(1, 1),
-                 grad_coef = 1e-2,
                  layer = 1,
                  alpha = 1,
                  **kwargs):
@@ -447,6 +446,9 @@ class BMLayer_Smax_Biased(nn.Module):
 
         self.k = torch.nn.Parameter(torch.empty(self.kernel_shape, requires_grad=True))
         torch.nn.init.xavier_uniform_(self.k)
+        # print(self.kernel_shape)
+        self.delta_x = nn.Parameter(torch.tensor(1.0, requires_grad=True))
+        self.delta_w = nn.Parameter(torch.tensor(1.0, requires_grad=True))
 
         self.layer = layer
 
@@ -479,6 +481,9 @@ class BMLayer_Smax_Biased(nn.Module):
 
         x1_pathces = torch.unsqueeze(x1_pathces, 2)
         k_for_patches = self.k.view(filter_height * filter_width * in_channels, out_channels) + self.weight_bias
+
+        # print(self.k.shape)
+        # print(x1_pathces.shape)
         x1_k1 = x1_pathces + k_for_patches[None, :, :, None, None]
 
 
@@ -490,11 +495,13 @@ class BMLayer_Smax_Biased(nn.Module):
         # print(x.shape)
         # print(self.k.shape)
         # print(x_pathces.shape)
-        x_pathces = torch.sum(x_pathces, 1, keepdim=True)
+        x_pathces = torch.sum(x_pathces, 1, keepdim=True) * self.delta_w
         # print(x_pathces.shape)
 
-        k_view = (torch.sum(k_view, 0, keepdim=False) * self.input_bias)[None, :, None, None]
-        k_sx_s = self.weight_bias * self.input_bias * filter_height * filter_width * in_channels
+        k_view = (torch.sum(k_view, 0, keepdim=False) * self.delta_x)[None, :, None, None]
+        # k_sx_s = self.weight_bias * self.input_bias * filter_height * filter_width * in_channels
+
+        # k_sx_s = self.delta_x * self.delta_w * filter_height * filter_width * in_channels
         # print(k_view.shape)
-        y = y11 - x_pathces * self.input_bias - k_view - k_sx_s + self.bias[None, :, None, None]
+        y = y11 - x_pathces - k_view + self.bias[None, :, None, None]
         return y

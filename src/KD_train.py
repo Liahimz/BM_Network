@@ -65,31 +65,98 @@ def train(model, model_layers, teacher_model, teacher_model_layers, train_datalo
     for epoch_i in range(n_epochs):   
         mean_acc = None
         
+        loss_list = [0, 1, 2, 3, 4]
+        # item = epoch_i % 5
+        # for i in range(5):
+        #     if i == item and item != 0 and item != 1:
+        #         model_layers[i * 2].k.requires_grad = True
+        #         model_layers[i * 2].bias.requires_grad = True
+        #         model_layers[i * 2].delta_x.requires_grad = True
+        #         model_layers[i * 2].delta_w.requires_grad = True
+        #         print("Learning:", i)
+        #     else:
+        #         model_layers[i * 2].k.requires_grad = False
+        #         model_layers[i * 2].bias.requires_grad = False
+        #         model_layers[i * 2].delta_x.requires_grad = False
+        #         model_layers[i * 2].delta_w.requires_grad = False
+        #         print("Freezed:", i)
+
         with tqdm(train_dataloader, unit="batch") as tepoch:     
             for iter_i, (x, y) in enumerate(tepoch):
                 tepoch.set_description(f"Epoch {epoch_i}")
                 x, y = x.to(device), y.to(device)  
+                
 
-                model_output = model_layers[0](x)
-                teacher_output = teacher_model_layers[0](x)
+                total_mse_loss = 0
+                model_output = x
+                teacher_output = x
+
+                pred = 0
+
+                optimizer.zero_grad()
+                # total_mse_loss_list = []
+                for idx, layer in enumerate(model_layers):
+                    model_output = model_layers[idx](model_output)
+                    teacher_output = teacher_model_layers[idx](teacher_output)
+                    if type(layer) == BMLayer_Smax_Biased:
+                        # print(idx, layer)
+                        loss_list[int(idx / 2)] = nn.MSELoss()(model_output, teacher_output)
+                        
+                        # total_mse_loss_list.append(nn.MSELoss()(model_output, teacher_output))
+                        # total_mse_loss += nn.MSELoss()(model_output, teacher_output)
+                        total_mse_loss += loss_list[int(idx / 2)]
+
+                    if type(layer) == nn.Linear:
+                        # print("end")
+                        pred = model_output
+                # loss_list = total_mse_loss_list
+                # exit(0)
+                # print(total_mse_loss_list)
 
 
-                optimizer.zero_grad()          
-                pred = model(x)
+                          
+               
                 # teacher_pred = teacher_model(x)
 
                 # if epoch_i > 3:
                 #     print((nn.CrossEntropyLoss()(pred, y)).item())
                 #     print((nn.MSELoss()(model_output, teacher_output)).item())
 
-                mse_loss = (nn.MSELoss()(model_output, teacher_output)).item()
+                mse_loss = (total_mse_loss).item()
                 if iter_i > 0:
                     stat.append(0.6 * mse_loss + 0.4 * stat[-1])
                 else:
                     stat.append(mse_loss)
 
-                alpha = 0.000001
-                loss = alpha * (nn.CrossEntropyLoss()(pred, y)) + (1 - alpha) * (nn.MSELoss()(model_output, teacher_output))
+                loss = 0
+                alpha = 1e-10
+                # if (epoch_i % 2 == 0):
+                #     model_layers[0].k.requires_grad = True
+                #     model_layers[0].bias.requires_grad = True
+                #     model_layers[0].delta_x.requires_grad = True
+                #     model_layers[0].delta_w.requires_grad = True
+
+                #     model_layers[2].k.requires_grad = False
+                #     model_layers[2].bias.requires_grad = False
+                #     model_layers[2].delta_x.requires_grad = False
+                #     model_layers[2].delta_w.requires_grad = False
+                #     loss = alpha * (nn.CrossEntropyLoss()(pred, y)) + (1 - alpha) * (total_mse_loss_list[0])
+                # else:
+                #     model_layers[0].k.requires_grad = False
+                #     model_layers[0].bias.requires_grad = False
+                #     model_layers[0].delta_x.requires_grad = False
+                #     model_layers[0].delta_w.requires_grad = False
+
+                #     model_layers[2].k.requires_grad = True
+                #     model_layers[2].bias.requires_grad = True
+                #     model_layers[2].delta_x.requires_grad = True
+                #     model_layers[2].delta_w.requires_grad = True
+                #     loss = alpha * (nn.CrossEntropyLoss()(pred, y)) + (1 - alpha) * (total_mse_loss_list[1])
+
+                # print((nn.CrossEntropyLoss()(pred, y)).item())
+                loss = alpha * (nn.CrossEntropyLoss()(pred, y)) + (1 - alpha) * (total_mse_loss)
+                # loss = total_mse_loss_list[0] + total_mse_loss_list[1]
+                # loss = alpha * (nn.CrossEntropyLoss()(pred, y)) + (1 - alpha) * sum(total_mse_loss_list)
                 # loss = alpha * (nn.MSELoss()(pred, teacher_pred)) + (1 - alpha) * (nn.MSELoss()(model_output, teacher_output))
                 loss.backward()
                 
@@ -108,6 +175,7 @@ def train(model, model_layers, teacher_model, teacher_model_layers, train_datalo
 
                 tepoch.set_postfix(loss=loss_trace[-1], mean_accuracy = mean_acc, batch_accuracy=accuracy_trace[-1])
 
+        print(loss_list)
         scheduler.step()
     # fig = plt.figure(figsize=(30, 50))
     # plt.plot(stat)
@@ -123,20 +191,20 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     #just for now depth is alpha
     for d in depth:
-        model = MorphSmax_NetBiased(0, (1, 28, 28), alpha=d)
+        model = MorphSmax_NetBiased(4, (1, 28, 28), alpha=1)
         model_layers = model.layers
-        teacher_model = CNN_Net(0, (1, 28, 28))
+        teacher_model = CNN_Net(4, (1, 28, 28))
         teacher_model_layers = teacher_model.layers
 
         model = model.to(device)
         teacher_model = teacher_model.to(device)
-        teacher_model.load_state_dict(torch.load('models/KDCNN_0_27-06-2022_13:36:10_trained.pt'))
+        teacher_model.load_state_dict(torch.load('models/KDCNN_4_08-07-2022_13:25:44_trained.pt'))
 
-        # model.load_state_dict(torch.load('models/CNN_Net_Smax_1line_1_07-07-2022_17:37:25_trained.pt'))
+        model.load_state_dict(torch.load('models/BM_Net_1.5_freezed_4_13-07-2022_20:47:14_trained.pt'))
 
         # criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[40, 150, 180], gamma=0.1)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -163,5 +231,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return model
 
 
-depths = [1] #, 6, 8, 10, 12, 14, 16, 18, 22
-model = train_multilayer(depth=depths, epochs=200, batch_size=100, name="BM_Net_1.5TEST_200", with_logs=False, save_params=True)
+depths = [4] #, 6, 8, 10, 12, 14, 16, 18, 22
+model = train_multilayer(depth=depths, epochs=150, batch_size=50, name="BM_Net_1.5_not_freezed", with_logs=False, save_params=True)
