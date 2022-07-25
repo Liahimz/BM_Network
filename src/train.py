@@ -1,6 +1,8 @@
+from operator import mod
 from time import sleep
 import torch
 import numpy as np
+from resnet import CNNresnet20
 from utils import *
 import torch.nn as nn
 from BM_Neuron import* 
@@ -31,6 +33,19 @@ def mnist(batch_size):
 
     testset = torchvision.datasets.MNIST(root='./data/mnist', train=False, download=True, transform=transform)
     # testset = torchvision.datasets.FashionMNIST(root='./data/f_mnist', train=False, download=True, transform=transform)
+    test_dataloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=1)
+    
+    return train_dataloader, test_dataloader
+
+
+def cifar10(batch_size):
+    
+    transform = transforms.Compose([transforms.ToTensor()])
+
+    trainset = torchvision.datasets.CIFAR10(root='./data/cifar10', train=True, download=True, transform=transform)
+    train_dataloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=1)
+
+    testset = torchvision.datasets.CIFAR10(root='./data/cifar10', train=False, download=True, transform=transform)
     test_dataloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=1)
     
     return train_dataloader, test_dataloader
@@ -149,7 +164,8 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     stats = {}
     for d in depth:
         # model = Smorph_Net(d, (1, 28, 28))
-        model = CNN_Net(d, (1, 28, 28))
+        # model = CNN_Net(d, (1, 28, 28))
+        model = CNNresnet20()
         # model = Test_smorph(d, (1, 28, 28))
         # model = Test_smorph(d, (1, 28, 28))
         # layers = model.layers
@@ -157,7 +173,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
         model = model.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 160, 190], gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 100, 150], gamma=0.1)
         # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
         dump_file = None
@@ -178,7 +194,7 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
         #     path_file = path.join(models, model_name + ".pt")
         #     torch.save(model.state_dict(), path_file)
 
-        train_dataloader, test_dataloader = mnist(batch_size)
+        train_dataloader, test_dataloader = cifar10(batch_size)
 
         train_loss, train_accuracy = train(model, train_dataloader, test_dataloader,
                                     criterion, optimizer, scheduler, writer,
@@ -200,5 +216,5 @@ def train_multilayer(depth, epochs, batch_size=100, name="BM_NET", with_logs = F
     return model
 
 
-depths = [1, 2, 3, 4]
-model = train_multilayer(depth=depths, epochs=50, batch_size=100, name="KDCNN", with_logs=False, save_params=True)
+depths = [1]
+model = train_multilayer(depth=depths, epochs=30, batch_size=100, name="CNNResNet20", with_logs=False, save_params=True)

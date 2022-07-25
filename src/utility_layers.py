@@ -173,7 +173,7 @@ def lnexpmax_func(alpha, layer):
 
 class Ln(nn.Module):
     def __init__(self, 
-                min_val = 1e-11,
+                min_val = 1e-12,
                  **kwargs):
         super().__init__()
         # self.filters = filters
